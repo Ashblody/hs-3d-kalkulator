@@ -1,27 +1,38 @@
+import { useState } from 'react'
 import type { Actuals, Project, Status } from './types'
 import { NumField } from './ui'
 import { num } from './format'
 import { calculate } from './calc'
 import { eur } from './format'
 
-export const statusLabels: Record<Status, string> = { osnutek: 'Osnutek', ponudba: 'Ponudba', potrjeno: 'Potrjeno', izdelava: 'V izdelavi', zakljuceno: 'Zaključeno' }
+export const statusLabels: Record<Status, string> = { ponudba: 'Ponudba', sprejeto: 'Sprejeto', natisnjeno: 'Natisnjeno', placano: 'Plačano' }
+export const statusColors: Record<Status, string> = { ponudba: 'bg-slate-200 text-slate-800', sprejeto: 'bg-sky-100 text-sky-800', natisnjeno: 'bg-amber-100 text-amber-800', placano: 'bg-emerald-100 text-emerald-800' }
 
 export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDelete, onStatus, onActual, onPdf }: {
   projects: Project[]; currentId: string | null
   onOpen: (p: Project) => void; onCopy: (p: Project) => void; onDelete: (p: Project) => void; onStatus: (p: Project, s: Status) => void
   onActual: (p: Project, a: Actuals) => void; onPdf: (p: Project) => void
 }) {
+  const [filter, setFilter] = useState<Status | 'vsi'>('vsi')
   if (!projects.length) return <div className="card text-slate-500">Ni shranjenih projektov.</div>
-  const sorted = [...projects].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const sorted = [...projects].filter((p) => filter === 'vsi' || p.status === filter).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   return (
     <div className="space-y-3">
+      <div className="card flex flex-wrap gap-2 items-center no-print">
+        <span className="text-sm text-slate-500">Filter:</span>
+        {(['vsi', ...Object.keys(statusLabels)] as (Status | 'vsi')[]).map((k) => (
+          <button key={k} onClick={() => setFilter(k)} className={`rounded-full px-3 py-1 text-xs font-semibold ${filter === k ? 'ring-2 ring-sky-500 ' : ''}${k === 'vsi' ? 'bg-white dark:bg-slate-800' : statusColors[k]}`}>
+            {k === 'vsi' ? `Vsi (${projects.length})` : `${statusLabels[k]} (${projects.filter((p) => p.status === k).length})`}
+          </button>))}
+      </div>
+      {!sorted.length && <div className="card text-slate-500">Ni projektov s tem statusom.</div>}
       {sorted.map((p) => {
         const r = calculate(p.input, p.snapshot)
         return (
           <div key={p.id} className={`card ${p.id === currentId ? '!ring-2 !ring-sky-500' : ''}`}>
             <div className="flex justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-semibold text-slate-900 dark:text-white truncate">{p.input.name}</div>
+                <div className="font-semibold text-slate-900 dark:text-white truncate"><span className={`mr-2 rounded-full px-2 py-0.5 text-xs ${statusColors[p.status] ?? ''}`}>{statusLabels[p.status] ?? p.status}</span>{p.input.name || '(brez imena)'}</div>
                 <div className="text-xs text-slate-500">{p.input.client || '—'} · {p.input.date} · {p.input.mode}</div>
               </div>
               <div className="text-right"><div className="font-bold text-emerald-600">{eur(r.gross)}</div><div className="text-xs text-slate-500">zaslužek {eur(r.earnings)}</div></div>
@@ -31,7 +42,7 @@ export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDe
                 {Object.entries(statusLabels).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
               <button className="btn-p" onClick={() => onOpen(p)}>Odpri</button>
-              <button className="btn" onClick={() => onCopy(p)}>Kopiraj</button>
+              <button className="btn" onClick={() => onCopy(p)}>Podvoji projekt</button>
               <button className="btn" onClick={() => onPdf(p)}>PDF ponudba</button>
               <button className="btn" onClick={() => confirm('Izbrišem projekt?') && onDelete(p)}>Izbriši</button>
             </div>

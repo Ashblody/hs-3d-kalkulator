@@ -42,14 +42,34 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
             <Select label="Tiskalnik" value={job.printerId} onChange={set('printerId')} options={settings.printers.map((p) => [p.id, p.name])} />
             <Select label="Material" value={job.materialId} onChange={set('materialId')} options={settings.materials.map((m) => [m.id, `${m.name} (${num(pricePerKg(m))} €/kg)`])} />
             <NumField label="Število kosov" value={job.pieces} onChange={(v) => set('pieces')(Math.max(1, Math.round(v)))} min={1} />
-            <NumField label="Teža kosa" value={job.gramsPerPiece} onChange={set('gramsPerPiece')} suffix="g" />
+            <div className="col-span-2 sm:col-span-3"><Check label="Vnos po ploščah iz slicerja (Bambu Studio / PrusaSlicer)" checked={job.usePlates} onChange={(v) => onChange({ ...job, usePlates: v, plates: v && !job.plates.length ? [{ hours: 0, minutes: 0, grams: 0, materialId: job.materialId }] : job.plates })} /></div>
+            {job.usePlates ? (
+              <div className="col-span-2 sm:col-span-3 space-y-2">
+                {job.plates.map((p, i) => {
+                  const setP = (patch: Partial<typeof p>) => onChange({ ...job, plates: job.plates.map((x, k) => (k === i ? { ...x, ...patch } : x)) })
+                  return (
+                    <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end rounded-xl bg-slate-50 dark:bg-slate-800/50 p-2">
+                      <div className="text-xs font-semibold self-center">Plošča {i + 1}</div>
+                      <NumField label="Ure" value={p.hours} onChange={(v) => setP({ hours: v })} suffix="h" />
+                      <NumField label="Minute" value={p.minutes} onChange={(v) => setP({ minutes: v })} suffix="min" />
+                      <NumField label="Grami" value={p.grams} onChange={(v) => setP({ grams: v })} suffix="g" />
+                      <div className="flex gap-1 items-end"><Select label="Material" value={p.materialId} onChange={(v) => setP({ materialId: v })} options={settings.materials.map((m) => [m.id, m.name])} />
+                        <button className="btn !px-2" title="Odstrani ploščo" onClick={() => onChange({ ...job, plates: job.plates.filter((_, k) => k !== i) })}>×</button></div>
+                    </div>)
+                })}
+                <button className="btn" onClick={() => onChange({ ...job, plates: [...job.plates, { hours: 0, minutes: 0, grams: 0, materialId: job.materialId }] })}>+ Dodaj ploščo</button>
+                <div className="text-xs text-slate-500">Plošče skupaj: {num(r.printHours)} h · {num(job.plates.reduce((a, p) => a + p.grams, 0))} g (čas in grami celega naročila; število kosov se ne množi)</div>
+              </div>
+            ) : (<>
             <div className="col-span-2 sm:col-span-3"><Check label="Vnesem skupen čas tiska za celo serijo" checked={job.useBatchTime} onChange={set('useBatchTime')} /></div>
             {job.useBatchTime ? (<>
               <NumField label="Skupen čas – ure" value={job.batchHours} onChange={set('batchHours')} suffix="h" />
               <NumField label="Skupen čas – minute" value={job.batchMinutes} onChange={set('batchMinutes')} suffix="min" />
             </>) : (<>
+              <NumField label="Teža kosa" value={job.gramsPerPiece} onChange={set('gramsPerPiece')} suffix="g" />
               <NumField label="Čas kosa – ure" value={job.hoursPerPiece} onChange={set('hoursPerPiece')} suffix="h" />
               <NumField label="Čas kosa – minute" value={job.minutesPerPiece} onChange={set('minutesPerPiece')} suffix="min" />
+            </>)}
             </>)}
             <NumField label="Dodatna poraba (podpore, purge, AMS)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />
             <NumField label="Potrošni material (lepilo …)" value={job.consumables} onChange={set('consumables')} suffix="€" />
@@ -133,6 +153,7 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
           <Big label="Predvideni zaslužek" tone={r.belowTarget ? 'red' : 'green'} value={eur(r.earnings)} sub={r.laborHours > 0 && !zase ? `${eur(r.earningsPerHour)}/h dela` : undefined} />
         </div>
         {r.belowTarget && <div className="card !ring-orange-400 text-sm text-orange-700 dark:text-orange-300">Zaslužek {eur(r.earningsPerHour)}/h je pod ciljem {eur(settings.business.targetHourly)}/h. Dvigni postavke ali pribitek.</div>}
+        {r.rounding > 0.004 && <div className="card text-sm text-slate-600 dark:text-slate-300">Zaokroženo navzgor na {num(settings.rates.roundTo)} €: {eur(r.netBeforeRounding)} → {eur(r.net)} (+{eur(r.rounding)})</div>}
         {r.minOrderApplied && <div className="card text-sm text-sky-700 dark:text-sky-300">Upoštevano minimalno naročilo {eur(settings.rates.minOrder)}.</div>}
 
         <div className="card">

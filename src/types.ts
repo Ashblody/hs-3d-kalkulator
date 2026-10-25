@@ -1,6 +1,8 @@
 export type Mode = 'stranka' | 'prijatelj' | 'zase'
 export type OrderType = 'tisk' | 'sken' | 'cad' | 'kombinirano' | 'digitalno'
-export type Status = 'osnutek' | 'ponudba' | 'potrjeno' | 'izdelava' | 'zakljuceno'
+export type Status = 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano'
+/** plošča iz slicerja (Bambu Studio / PrusaSlicer) */
+export interface Plate { hours: number; minutes: number; grams: number; materialId: string }
 
 export interface Printer {
   id: string
@@ -29,6 +31,8 @@ export interface Material {
 export interface Rates {
   /** fiksni doplačili za datoteko zraven tiska */
   fileAddonStl: number
+  /** zaokroževanje ponudbe navzgor: 0 = izklop, 1 ali 5 € */
+  roundTo: number
   fileAddonStep: number
   /** Prijatelj: € na uro tiskanja namesto % pribitka */
   friendPrintHourly: number
@@ -73,6 +77,9 @@ export interface JobInput {
   hoursPerPiece: number
   minutesPerPiece: number
   useBatchTime: boolean
+  /** vnos po ploščah iz slicerja – sešteje čas in grame */
+  usePlates: boolean
+  plates: Plate[]
   batchHours: number
   batchMinutes: number
   extraMaterialG: number

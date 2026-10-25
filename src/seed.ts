@@ -66,7 +66,7 @@ export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, mar
 
 export const rates: Rates = {
   scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
-  markupPct: 100, reservePct: 10, friendDiscountPct: 15, friendPrintHourly: 1, fileAddonStl: 15, fileAddonStep: 30,
+  markupPct: 100, reservePct: 10, friendDiscountPct: 15, friendPrintHourly: 1, fileAddonStl: 15, roundTo: 5, fileAddonStep: 30,
 }
 
 export const business: Business = {
@@ -98,7 +98,7 @@ export const emptyJob = (r: Rates = rates): JobInput => ({
   name: 'Nov projekt', client: '', date: new Date().toISOString().slice(0, 10), description: '',
   mode: 'stranka', orderType: 'tisk', printerId: 'x2d', materialId: 'bambu-pla',
   pieces: 1, gramsPerPiece: 0, hoursPerPiece: 0, minutesPerPiece: 0,
-  useBatchTime: false, batchHours: 0, batchMinutes: 0, extraMaterialG: 0,
+  useBatchTime: false, usePlates: false, plates: [], batchHours: 0, batchMinutes: 0, extraMaterialG: 0,
   consumables: 0, otherDirect: 0, reservePct: r.reservePct, markupPct: r.markupPct, printCostOverride: null,
   scanH: 0, editH: 0, cadH: 0, reverseH: 0, prepH: 0, finishH: 0, extraWorkH: 0, extraWorkRate: r.prep,
   km: 0, packaging: 0, delivery: 0, otherCosts: 0, discount: 0, friendDiscountPct: r.friendDiscountPct,

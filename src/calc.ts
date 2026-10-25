@@ -22,6 +22,7 @@ export function fileSaleInfo(j: JobInput, s: Settings) {
 
 export function totalPrintHours(j: JobInput) {
   // skupen čas serije se NE množi s številom kosov
+  if (j.usePlates) return (j.plates ?? []).reduce((a, p) => a + nz(p.hours) + nz(p.minutes) / 60, 0)
   if (j.useBatchTime) return nz(j.batchHours) + nz(j.batchMinutes) / 60
   return nz(j.pieces) * (nz(j.hoursPerPiece) + nz(j.minutesPerPiece) / 60)
 }
@@ -35,6 +36,7 @@ export interface Result {
   digital: number; laborHours: number
   transport: number; packaging: number; delivery: number; otherCosts: number; discount: number
   subtotal: number; minOrderApplied: boolean
+  netBeforeRounding: number; rounding: number
   net: number; vat: number; gross: number; perPiece: number
   /** zase: informativna vrednost časa */
   timeValue: number
@@ -46,10 +48,14 @@ export function calculate(j: JobInput, s: Settings): Result {
   const printer = s.printers.find((p) => p.id === j.printerId)
   const mat = s.materials.find((m) => m.id === j.materialId)
   const printHours = totalPrintHours(j)
-  const kg = (nz(j.pieces) * nz(j.gramsPerPiece) + nz(j.extraMaterialG)) / 1000
+  const plates = j.usePlates ? (j.plates ?? []) : []
+  const kg = ((j.usePlates ? plates.reduce((a, p) => a + nz(p.grams), 0) : nz(j.pieces) * nz(j.gramsPerPiece)) + nz(j.extraMaterialG)) / 1000
   const powerW = printer && mat ? powerFor(printer, mat.type) : 0
 
-  const material = mat ? kg * pricePerKg(mat) : 0
+  const priceOf = (id: string) => { const m = s.materials.find((x) => x.id === id) ?? mat; return m ? pricePerKg(m) : 0 }
+  const material = j.usePlates
+    ? plates.reduce((a, p) => a + (nz(p.grams) / 1000) * priceOf(p.materialId), 0) + (nz(j.extraMaterialG) / 1000) * (mat ? pricePerKg(mat) : 0)
+    : mat ? kg * pricePerKg(mat) : 0
   const electricity = printHours * (powerW / 1000) * s.business.kwhPrice
   const wear = printer ? printHours * wearPerHour(printer) : 0
   const consumables = nz(j.consumables)
@@ -92,7 +98,10 @@ export function calculate(j: JobInput, s: Settings): Result {
   const discount = zase ? 0 : nz(j.discount)
   const subtotal = printSale + services + digitalBilled + transport + packaging + delivery + otherCosts - discount
   const minOrderApplied = !zase && subtotal > 0 && subtotal < r.minOrder
-  const net = Math.max(0, minOrderApplied ? r.minOrder : subtotal)
+  const netBeforeRounding = Math.max(0, minOrderApplied ? r.minOrder : subtotal)
+  const step = nz(r.roundTo)
+  const net = !zase && step > 0 && netBeforeRounding > 0 ? Math.ceil(Math.round(netBeforeRounding * 100) / 100 / step) * step : netBeforeRounding
+  const rounding = net - netBeforeRounding
   const vat = s.business.vatEnabled && !zase ? net * (s.business.vatPct / 100) : 0
   const gross = net + vat
   const perPiece = nz(j.pieces) > 0 ? gross / j.pieces : gross
@@ -112,7 +121,7 @@ export function calculate(j: JobInput, s: Settings): Result {
     printMarginPct: printSale > 0 ? (markup / printSale) * 100 : 0,
     servicesStandard, servicesDiscount, services, digital: digitalBilled, laborHours,
     transport, packaging, delivery, otherCosts, discount, subtotal, minOrderApplied,
-    net, vat, gross, perPiece, timeValue, fixedShare, tax, realCosts, earnings, earningsPerHour, belowTarget,
+    netBeforeRounding, rounding, net, vat, gross, perPiece, timeValue, fixedShare, tax, realCosts, earnings, earningsPerHour, belowTarget,
   }
 }
 

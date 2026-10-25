@@ -27,6 +27,8 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
           <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
           <NumField label="Prijateljski popust (storitve)" value={s.rates.friendDiscountPct} onChange={setR('friendDiscountPct')} suffix="%" />
           <NumField label="Prijatelj: € na uro tiskanja (namesto pribitka)" value={s.rates.friendPrintHourly} onChange={setR('friendPrintHourly')} suffix="€/h" />
+          <label className="block"><span className="lbl">Zaokroževanje ponudbe (navzgor)</span>
+            <select className="inp" value={s.rates.roundTo} onChange={(e) => setR('roundTo')(Number(e.target.value))}><option value={0}>Izklop</option><option value={1}>Na 1 €</option><option value={5}>Na 5 €</option></select></label>
           <NumField label="Doplačilo: STL zraven tiska" value={s.rates.fileAddonStl} onChange={setR('fileAddonStl')} suffix="€" />
           <NumField label="Doplačilo: STEP zraven tiska" value={s.rates.fileAddonStep} onChange={setR('fileAddonStep')} suffix="€" />
         </div>

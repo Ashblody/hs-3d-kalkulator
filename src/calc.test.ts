@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { calculate, fileSaleInfo, markupToMargin, r2, totalPrintHours, wearPerHour } from './calc'
 import { defaultSettings, demoJob , emptyJob } from './seed'
 
+/** brez zaokroževanja – za preverjanje točnih zneskov */
+const noRound = () => { const s = defaultSettings(); s.rates.roundTo = 0; return s }
+
 describe('demo projekt Nosilci lučk', () => {
-  const s = defaultSettings()
+  const s = noRound()
   const res = calculate(demoJob(), s)
   it('čas in material', () => {
     expect(r2(res.printHours)).toBe(18.8)
@@ -35,7 +38,7 @@ describe('demo projekt Nosilci lučk', () => {
 })
 
 describe('pravila', () => {
-  const s = defaultSettings()
+  const s = noRound()
   it('pribitek ni marža', () => expect(r2(markupToMargin(50))).toBe(33.33))
   it('skupen čas serije se ne množi s kosi', () => {
     const j = { ...demoJob(), useBatchTime: true, batchHours: 10, batchMinutes: 30 }
@@ -59,7 +62,7 @@ describe('pravila', () => {
     expect(a.net).toBe(15)
   })
   it('DDV ločen', () => {
-    const s2 = defaultSettings(); s2.business.vatEnabled = true
+    const s2 = noRound(); s2.business.vatEnabled = true
     const a = calculate(demoJob(), s2)
     expect(a.gross).toBeCloseTo(a.net * 1.22)
   })
@@ -69,14 +72,14 @@ describe('pravila', () => {
   })
 })
 
-import { normalize, initialState , startBlank, hasUnsaved } from './store'
+import { normalize, initialState , startBlank, hasUnsaved , duplicateProject } from './store'
 describe('varnostna kopija', () => {
   it('izvoz/uvoz ohrani podatke', () => {
     ;(globalThis as any).window = { matchMedia: () => ({ matches: false }) }
     const s = initialState()
     const back = normalize(JSON.parse(JSON.stringify(s)))
     expect(back.projects[0].input.name).toBe('Nosilci lučk – 2 leva + 2 desna')
-    expect(r2(calculate(back.projects[0].input, back.projects[0].snapshot).net)).toBe(132.22)
+    expect(r2(calculate(back.projects[0].input, back.projects[0].snapshot).net)).toBe(135)
   })
   it('zavrne neveljavno datoteko', () => {
     expect(() => normalize({ foo: 1 })).toThrow()
@@ -100,7 +103,7 @@ describe('migracija materialov', () => {
 })
 
 describe('stopnje', () => {
-  const s = defaultSettings()
+  const s = noRound()
   const t = (mode: 'stranka' | 'prijatelj' | 'zase') => calculate({ ...demoJob(), mode }, s)
   it('izpis', () => { for (const m of ['stranka', 'prijatelj', 'zase'] as const) { const x = t(m); console.log(m, JSON.stringify({ stroski: r2(x.printCost), tisk: r2(x.printSale), storitve: r2(x.services), skupaj: r2(x.net), kos: r2(x.net / 4) })) } })
   it('zase = samo stroški', () => expect(t('zase').printSale).toBeCloseTo(t('zase').printCost))
@@ -112,7 +115,7 @@ describe('stopnje', () => {
 })
 
 describe('datoteka zraven tiska', () => {
-  const s = defaultSettings()
+  const s = noRound()
   const f = (kind: 'none' | 'stl' | 'step', mode: 'stranka' | 'prijatelj' | 'zase' = 'stranka') => calculate({ ...demoJob(), mode, fileSale: { kind } }, s)
   it('izpis', () => { for (const k of ['stl', 'step'] as const) for (const m of ['stranka', 'prijatelj', 'zase'] as const) { const x = f(k, m); console.log('FILE', k, m, JSON.stringify({ datoteka: r2(x.digital), storitve: r2(x.services), skupaj: r2(x.net), kos: r2(x.perPiece) })) } })
   it('STL 15 / STEP 30, storitve normalno', () => {
@@ -157,5 +160,38 @@ describe('migracija cenika v3', () => {
     expect(st.settings.rates).toMatchObject({ scan: 20, edit: 15, cad: 20, reverse: 25, prep: 22, markupPct: 100, km: 0.3, minOrder: 15, reservePct: 10, friendDiscountPct: 15 })
     const again = normalize({ settings: { ...st.settings, rates: { ...st.settings.rates, scan: 25 } }, projects: [] })
     expect(again.settings.rates.scan).toBe(25)
+  })
+})
+
+describe('zaokroževanje, plošče, statusi, podvoji', () => {
+  it('privzeto navzgor na 5 €, prikaže razliko', () => {
+    const r = calculate(demoJob(), defaultSettings())
+    expect(r.net).toBe(135); expect(r2(r.rounding)).toBe(2.78); expect(r2(r.netBeforeRounding)).toBe(132.22)
+    console.log('ROUND', JSON.stringify({ stl: calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, defaultSettings()).net, step: calculate({ ...demoJob(), fileSale: { kind: 'step' } }, defaultSettings()).net }))
+  })
+  it('na 1 € in izklop; zase se ne zaokroži', () => {
+    const s = defaultSettings(); s.rates.roundTo = 1
+    expect(calculate(demoJob(), s).net).toBe(133)
+    s.rates.roundTo = 0; expect(r2(calculate(demoJob(), s).net)).toBe(132.22)
+    expect(r2(calculate({ ...demoJob(), mode: 'zase' }, defaultSettings()).net)).toBe(35.49)
+    expect(calculate({ ...demoJob(), scanH: 0, editH: 0, cadH: 0, prepH: 0, finishH: 0, pieces: 1, gramsPerPiece: 5, hoursPerPiece: 0, minutesPerPiece: 20, consumables: 0 }, defaultSettings()).net).toBe(15)
+  })
+  it('plošče seštejejo čas in grame, material po plošči', () => {
+    const s = noRound()
+    const plates = { ...demoJob(), usePlates: true, plates: [{ hours: 9, minutes: 24, grams: 384, materialId: 'bambu-asa' }, { hours: 9, minutes: 24, grams: 384, materialId: 'bambu-asa' }] }
+    const a = calculate(plates, s), b = calculate(demoJob(), s)
+    expect(a.printHours).toBeCloseTo(b.printHours); expect(a.kg).toBeCloseTo(b.kg); expect(r2(a.net)).toBe(r2(b.net))
+    const mixed = calculate({ ...plates, plates: [plates.plates[0], { ...plates.plates[1], materialId: 'bambu-pla' }] }, s)
+    expect(mixed.material).not.toBeCloseTo(a.material)
+  })
+  it('statusi: migracija in nov projekt Ponudba', () => {
+    const st0 = initialState()
+    const st = normalize({ ...st0, projects: [{ ...st0.projects[0], status: 'zakljuceno' }, { ...st0.projects[0], id: 'x', status: undefined }] })
+    expect(st.projects.map((p) => p.status)).toEqual(['natisnjeno', 'ponudba'])
+    expect(initialState().projects[0].status).toBe('ponudba')
+  })
+  it('podvoji projekt', () => {
+    const st = initialState(); const c = duplicateProject(st.projects[0], st.settings)
+    expect(c.input.name).toBe(st.projects[0].input.name + ' (kopija)'); expect(c.id).not.toBe(st.projects[0].id); expect(c.status).toBe('ponudba')
   })
 })

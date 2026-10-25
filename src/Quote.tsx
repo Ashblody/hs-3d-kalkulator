@@ -40,6 +40,7 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
       </table>
       <div className="mt-4 ml-auto w-72">
         {r.minOrderApplied && <div className="flex justify-between"><span>Minimalno naročilo</span><span>{eur(settings.rates.minOrder)}</span></div>}
+        {r.rounding > 0.004 && <div className="flex justify-between"><span>Zaokroženo</span><span>{eur(r.rounding)}</span></div>}
         <div className="flex justify-between"><span>Skupaj brez DDV</span><span>{eur(r.net)}</span></div>
         {settings.business.vatEnabled && <div className="flex justify-between"><span>DDV {num(settings.business.vatPct)} %</span><span>{eur(r.vat)}</span></div>}
         <div className="flex justify-between text-lg font-bold border-t-2 border-black mt-1 pt-1"><span>ZA PLAČILO</span><span>{eur(r.gross)}</span></div>

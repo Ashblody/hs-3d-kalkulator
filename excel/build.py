@@ -73,10 +73,10 @@ cn=wb.create_sheet('Cenik storitev')
 header(cn,'Cenik storitev',{'A':38,'B':14,'C':8})
 rates=[('3D-skeniranje',20,'€/h'),('Urejanje skena',15,'€/h'),('CAD-modeliranje',20,'€/h'),('Zahtevnejši reverse engineering',25,'€/h'),
 ('Priprava tiska in dodelava',15,'€/h'),('Prevoz',0.30,'€/km'),('Minimalno naročilo',15,'€'),('Privzeti pribitek tiska',100,'%'),
-('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%'),('Prijatelj: cena na uro tiskanja (namesto pribitka)',1,'€/h'),('Doplačilo: STL zraven tiska',15,'€'),('Doplačilo: STEP zraven tiska',30,'€')]
+('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%'),('Prijatelj: cena na uro tiskanja (namesto pribitka)',1,'€/h'),('Doplačilo: STL zraven tiska',15,'€'),('Doplačilo: STEP zraven tiska',30,'€'),('Zaokroževanje ponudbe navzgor (0 = izklop, 1 ali 5)',5,'€')]
 for i,(l,v,u) in enumerate(rates):
     r=3+i; cn.cell(r,1,l); c=cn.cell(r,2,v); inp(c,N2); cn.cell(r,3,u)
-R={k:f"'Cenik storitev'!$B${3+i}" for i,k in enumerate(['scan','edit','cad','rev','prep','km','min','markup','reserve','friend','friendH','fstl','fstep'])}
+R={k:f"'Cenik storitev'!$B${3+i}" for i,k in enumerate(['scan','edit','cad','rev','prep','km','min','markup','reserve','friend','friendH','fstl','fstep','round'])}
 
 # ---------- Poslovne ----------
 ps=wb.create_sheet('Poslovne nastavitve')
@@ -156,14 +156,14 @@ pc=DataValidation(type='whole',operator='greaterThanOrEqual',formula1='1',showEr
 
 Z='$C$7="Zase"'
 calc=[
-(12,'Čas tiska skupaj (h)','=IF($C$16="DA",$C$17+$C$18/60,$C$12*($C$14+$C$15/60))',N2),
-(13,'Filament skupaj (kg)','=($C$12*$C$13+$C$19)/1000','0.000'),
+(12,'Čas tiska skupaj (h)',"=IF('Plošče'!$B$2=\"DA\",'Plošče'!$B$16,IF($C$16=\"DA\",$C$17+$C$18/60,$C$12*($C$14+$C$15/60)))",N2),
+(13,'Filament skupaj (kg)',"=(IF('Plošče'!$B$2=\"DA\",'Plošče'!$D$16,$C$12*$C$13)+$C$19)/1000",'0.000'),
 (14,'Vrsta materiala','=INDEX(Materiali!$C:$C,MATCH($C$11,Materiali!$A:$A,0))',None),
 (15,'Cena materiala €/kg','=INDEX(Materiali!$H:$H,MATCH($C$11,Materiali!$A:$A,0))',EUR),
 (16,'Vrstica tiskalnika','=MATCH($C$10,Tiskalniki!$A:$A,0)','0'),
 (17,'Moč (W)','=IFERROR(IF(ISNUMBER(INDEX(Tiskalniki!$F:$K,F16,MATCH(F14,Tiskalniki!$F$3:$K$3,0))),INDEX(Tiskalniki!$F:$K,F16,MATCH(F14,Tiskalniki!$F$3:$K$3,0)),N(INDEX(Tiskalniki!$E:$E,F16))),N(INDEX(Tiskalniki!$E:$E,F16)))','0'),
 (18,'Amortizacija €/h','=INDEX(Tiskalniki!$L:$L,F16)','0.0000'),
-(20,'Material','=F13*F15',EUR),
+(20,'Material',"=IF('Plošče'!$B$2=\"DA\",'Plošče'!$F$16+$C$19/1000*F15,F13*F15)",EUR),
 (21,'Elektrika',f"=F12*F17/1000*{B['kwh']}",EUR),
 (22,'Amortizacija tiskalnika','=F12*F18',EUR),
 (23,'Potrošni + ostali neposredni','=$C$20+$C$21',EUR),
@@ -184,7 +184,7 @@ calc=[
 (39,'Popust',f'=IF({Z},0,$C$40)',EUR),
 (40,'Vmesna vsota','=F30+F35+F36+F37+F38-F39',EUR),
 (41,'Minimalno naročilo upoštevano',f"=AND(NOT({Z}),F40>0,F40<{R['min']})",None),
-(42,'PRIHODEK brez DDV',f"=MAX(0,IF(F41,{R['min']},F40))",EUR),
+(42,'PRIHODEK brez DDV (zaokroženo navzgor)',f"=IF(AND(NOT({Z}),{R['round']}>0,MAX(0,IF(F41,{R['min']},F40))>0),CEILING(ROUND(MAX(0,IF(F41,{R['min']},F40)),2),{R['round']}),MAX(0,IF(F41,{R['min']},F40)))",EUR),
 (43,'DDV',f"=IF(AND({B['vat']}=\"DA\",NOT({Z})),F42*{B['vatpct']}/100,0)",EUR),
 (44,'KONČNA CENA (z DDV, če je obračunan)','=F42+F43',EUR),
 (45,'Cena na kos','=IF($C$12>0,F44/$C$12,F44)',EUR),
@@ -263,4 +263,25 @@ for i,t in enumerate(['1) Shrani kopijo datoteke ali vpiši projekt v list Proje
  '4) Ročni stroški tiska (C24) pusti prazno; Datoteke!B21 = Brez, ročne datoteke na NE.',
  'Cenik, materiali in tiskalniki ostanejo nespremenjeni.']):
     k.cell(58+i,2,t).font=Font(color='334155')
+# ---------- Plošče (slicer) ----------
+pl=wb.create_sheet('Plošče')
+pl.column_dimensions['A'].width=30
+for col in 'BCDEF': pl.column_dimensions[col].width=14
+pl['A1']='Plošče iz slicerja (Bambu Studio / PrusaSlicer)'; pl['A1'].font=Font(bold=True,size=14,color=BLUE)
+pl['A2']='Uporabi plošče (DA/NE)'; pl['B2']='NE'; inp(pl['B2'],None)
+dvp=DataValidation(type='list',formula1='"DA,NE"'); pl.add_data_validation(dvp); dvp.add('B2')
+pl['A3']='Če je DA: čas in grami celega naročila = vsota plošč (število kosov se ne množi). Dodatna poraba (Kalkulator C19) se prišteje.'; pl['A3'].font=Font(italic=True,color='64748B')
+for c,h in zip('ABCDEF',['Plošča','Ure','Minute','Grami','Material','Strošek materiala']): pl[f'{c}4']=h; pl[f'{c}4'].font=Font(bold=True)
+dvm=DataValidation(type='list',formula1='=Materiali!$A$4:$A$45',allow_blank=True); pl.add_data_validation(dvm)
+for r in range(5,15):
+    pl[f'A{r}']=f'Plošča {r-4}'
+    for c in 'BCD': inp(pl[f'{c}{r}'],N2)
+    inp(pl[f'E{r}'],None); dvm.add(f'E{r}')
+    pl[f'F{r}']=f'=IF(OR(D{r}="",E{r}=""),0,D{r}/1000*IFERROR(INDEX(Materiali!$H:$H,MATCH(E{r},Materiali!$A:$A,0)),0))'; pl[f'F{r}'].number_format=EUR
+pl['A16']='SKUPAJ'; pl['A16'].font=Font(bold=True)
+pl['B16']='=SUM(B5:B14)+SUM(C5:C14)/60'; pl['B16'].number_format=N2
+pl['C16']='h skupaj'
+pl['D16']='=SUM(D5:D14)'; pl['F16']='=SUM(F5:F14)'; pl['F16'].number_format=EUR
+for c in 'BDF': pl[f'{c}16'].font=Font(bold=True,color=GREEN)
+
 wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v6.xlsx')
