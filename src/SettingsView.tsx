@@ -26,6 +26,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
           <NumField label="Privzeti pribitek tiska" value={s.rates.markupPct} onChange={setR('markupPct')} suffix="%" />
           <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
           <NumField label="Prijateljski popust (storitve)" value={s.rates.friendDiscountPct} onChange={setR('friendDiscountPct')} suffix="%" />
+          <NumField label="Prijatelj: € na uro tiskanja (namesto pribitka)" value={s.rates.friendPrintHourly} onChange={setR('friendPrintHourly')} suffix="€/h" />
         </div>
       </details>
 

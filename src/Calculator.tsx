@@ -54,10 +54,12 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
             <NumField label="Dodatna poraba (podpore, purge, AMS)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />
             <NumField label="Potrošni material (lepilo …)" value={job.consumables} onChange={set('consumables')} suffix="€" />
             <NumField label="Rezerva za neuspele tiske" value={job.reservePct} onChange={set('reservePct')} suffix="%" />
-            {!zase && <NumField label="Pribitek na stroške tiska" value={job.markupPct} onChange={set('markupPct')} suffix="%" />}
+            {job.mode === 'stranka' && <NumField label="Pribitek na stroške tiska" value={job.markupPct} onChange={set('markupPct')} suffix="%" />}
             <div className="col-span-2 sm:col-span-3 text-xs text-slate-500 dark:text-slate-400">
               Čas skupaj {num(r.printHours)} h · filament {num(r.kg * 1000)} g · moč {num(r.powerW)} W{printer && !r.powerW ? ' (vnesi moč v Nastavitvah)' : ''} · amortizacija {printer ? num(wearPerHour(printer)) : 0} €/h
-              {!zase && ` · pribitek ${num(job.markupPct)} % = marža ${num(markupToMargin(job.markupPct))} %`}
+              {job.mode === 'stranka' && ` · pribitek ${num(job.markupPct)} % = marža ${num(markupToMargin(job.markupPct))} %`}
+              {job.mode === 'prijatelj' && ` · Prijatelj: stroški + ${num(settings.rates.friendPrintHourly)} € na uro tiskanja (brez % pribitka)`}
+              {zase && ' · Zase: tisk po stroških, brez pribitka'}
               {mat && printer && powerFor(printer, mat.type) === 0 && <span className="text-orange-600"> · Za {mat.type} na tem tiskalniku moč ni vnesena.</span>}
             </div>
           </Section>
@@ -136,7 +138,8 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
           <Row l="Potrošni + ostali neposredni" v={eur(r.consumables + r.otherDirect)} />
           <Row l={`Rezerva ${num(job.reservePct)} %`} v={eur(r.reserve)} />
           <Row l="Stroški tiskanja" v={eur(r.printCost)} strong />
-          {!zase && <Row l={`Pribitek ${num(job.markupPct)} % (marža ${num(r.printMarginPct)} %)`} v={eur(r.markup)} />}
+          {job.mode === 'stranka' && <Row l={`Pribitek ${num(job.markupPct)} % (marža ${num(r.printMarginPct)} %)`} v={eur(r.markup)} />}
+          {job.mode === 'prijatelj' && <Row l={`Prijatelj: ${num(r.printHours)} h × ${num(settings.rates.friendPrintHourly)} €/h tiska`} v={eur(r.markup)} />}
           <Row l="Prodajna cena tiska" v={eur(r.printSale)} />
           <div className="text-xs font-semibold text-slate-400 mt-3">2. Prodajna vrednost dela</div>
           <Row l="Storitve po ceniku" v={eur(r.servicesStandard)} />

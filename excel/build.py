@@ -73,10 +73,10 @@ cn=wb.create_sheet('Cenik storitev')
 header(cn,'Cenik storitev',{'A':38,'B':14,'C':8})
 rates=[('3D-skeniranje',20,'€/h'),('Urejanje skena',15,'€/h'),('CAD-modeliranje',20,'€/h'),('Zahtevnejši reverse engineering',25,'€/h'),
 ('Priprava tiska in dodelava',15,'€/h'),('Prevoz',0.30,'€/km'),('Minimalno naročilo',15,'€'),('Privzeti pribitek tiska',100,'%'),
-('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%')]
+('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%'),('Prijatelj: cena na uro tiskanja (namesto pribitka)',1,'€/h')]
 for i,(l,v,u) in enumerate(rates):
     r=3+i; cn.cell(r,1,l); c=cn.cell(r,2,v); inp(c,N2); cn.cell(r,3,u)
-R={k:f"'Cenik storitev'!$B${3+i}" for i,k in enumerate(['scan','edit','cad','rev','prep','km','min','markup','reserve','friend'])}
+R={k:f"'Cenik storitev'!$B${3+i}" for i,k in enumerate(['scan','edit','cad','rev','prep','km','min','markup','reserve','friend','friendH'])}
 
 # ---------- Poslovne ----------
 ps=wb.create_sheet('Poslovne nastavitve')
@@ -164,8 +164,8 @@ calc=[
 (24,'Stroški pred rezervo','=SUM(F20:F23)',EUR),
 (25,'Rezerva','=F24*$C$22/100',EUR),
 (26,'STROŠKI TISKANJA','=IF(ISNUMBER($C$24),$C$24,F24+F25)',EUR),
-(27,'Pribitek % (Zase = 0)',f'=IF({Z},0,$C$23)',N2),
-(28,'Pribitek €','=F26*F27/100',EUR),
+(27,'Pribitek % (samo Stranka)','=IF($C$7="Stranka",$C$23,0)',N2),
+(28,'Pribitek € (Prijatelj: ure tiska × €/h)',f"=F26*F27/100+IF($C$7=\"Prijatelj\",F12*{R['friendH']},0)",EUR),
 (29,'Bruto marža tiska','=IF(F30>0,F28/F30,0)',PCT),
 (30,'Prodajna cena tiska','=F26+F28',EUR),
 (32,'Storitve po ceniku',f"=$C$26*{R['scan']}+$C$27*{R['edit']}+$C$28*{R['cad']}+$C$29*{R['rev']}+$C$30*{R['prep']}+$C$31*{R['prep']}+$C$32*$C$33",EUR),
@@ -250,4 +250,4 @@ pj['A62']='Vnesi vrednosti iz Kalkulatorja (Kopiraj → Prilepi kot vrednosti), 
 pj.freeze_panes='A4'
 
 for ws in wb.worksheets: ws.sheet_properties.tabColor={'Kalkulator':'F97316'}.get(ws.title,'0F172A')
-wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v3.xlsx')
+wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v4.xlsx')

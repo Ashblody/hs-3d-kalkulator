@@ -44,7 +44,8 @@ describe('pravila', () => {
   it('prijateljski popust samo na storitve', () => {
     const j = { ...demoJob(), mode: 'prijatelj' as const, km: 10 }
     const a = calculate(j, s), b = calculate({ ...j, mode: 'stranka' }, s)
-    expect(a.printSale).toBeCloseTo(b.printSale)
+    expect(a.printSale).toBeCloseTo(a.printCost + a.printHours * 1)
+    expect(b.printSale).toBeCloseTo(b.printCost * 2)
     expect(a.transport).toBeCloseTo(b.transport)
     expect(a.services).toBeCloseTo(61.25 * 0.85)
   })
@@ -95,6 +96,18 @@ describe('migracija materialov', () => {
     for (const m of materialsV2) expect(st.settings.materials.some((x) => x.id === m.id)).toBe(true)
     const again = normalize(st)
     expect(again.settings.materials.length).toBe(st.settings.materials.length)
+  })
+})
+
+describe('stopnje', () => {
+  const s = defaultSettings()
+  const t = (mode: 'stranka' | 'prijatelj' | 'zase') => calculate({ ...demoJob(), mode }, s)
+  it('izpis', () => { for (const m of ['stranka', 'prijatelj', 'zase'] as const) { const x = t(m); console.log(m, JSON.stringify({ stroski: r2(x.printCost), tisk: r2(x.printSale), storitve: r2(x.services), skupaj: r2(x.net), kos: r2(x.net / 4) })) } })
+  it('zase = samo stroški', () => expect(t('zase').printSale).toBeCloseTo(t('zase').printCost))
+  it('prijatelj €/h je nastavitev', () => {
+    const s2 = { ...s, rates: { ...s.rates, friendPrintHourly: 2 } }
+    const a = calculate({ ...demoJob(), mode: 'prijatelj' }, s2)
+    expect(a.printSale).toBeCloseTo(a.printCost + a.printHours * 2)
   })
 })
 

@@ -53,8 +53,10 @@ export function calculate(j: JobInput, s: Settings): Result {
   const printCost = printOverridden ? (j.printCostOverride as number) : printBeforeReserve + reserve
 
   const zase = j.mode === 'zase'
-  const markupPct = zase ? 0 : nz(j.markupPct)
-  const printSale = printCost * (1 + markupPct / 100)
+  // Stranka: % pribitek · Prijatelj: stroški + € na uro tiskanja · Zase: samo stroški
+  const markupPct = j.mode === 'stranka' ? nz(j.markupPct) : 0
+  const friendFee = j.mode === 'prijatelj' ? printHours * nz(s.rates.friendPrintHourly) : 0
+  const printSale = printCost * (1 + markupPct / 100) + friendFee
   const markup = printSale - printCost
 
   const r = s.rates

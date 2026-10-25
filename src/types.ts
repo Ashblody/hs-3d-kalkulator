@@ -27,6 +27,8 @@ export interface Material {
 }
 
 export interface Rates {
+  /** Prijatelj: € na uro tiskanja namesto % pribitka */
+  friendPrintHourly: number
   scan: number
   edit: number
   cad: number
