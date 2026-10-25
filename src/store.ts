@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { JobInput, Project, Settings } from './types'
-import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2 } from './seed'
+import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, ratesV1, rates as ratesNow } from './seed'
 import { uid } from './format'
 
 export interface AppState { version: 1; settings: Settings; projects: Project[]; current: JobInput; currentId: string | null; dark: boolean }
@@ -29,9 +29,14 @@ export function normalize(raw: unknown): AppState {
   const allSeeds = [...seedV1, ...materialsV2]
   const appended = allSeeds.filter((m) => !seen.has(m.id) && !have.has(m.id)).map((m) => structuredClone(m))
   const materials = [...(r.settings.materials ?? base.settings.materials), ...appended]
+  // migracija cenika v3: zamenjaj samo vrednosti, ki so še enake starim privzetim
+  const storedRates = { ...base.settings.rates, ...r.settings.rates }
+  if ((r.settings.ratesVersion ?? 1) < 3) {
+    for (const k of Object.keys(ratesV1) as (keyof typeof ratesV1)[]) if (r.settings.rates?.[k] === ratesV1[k]) storedRates[k] = ratesNow[k]
+  }
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), rates: { ...base.settings.rates, ...r.settings.rates }, business: { ...base.settings.business, ...r.settings.business } },
+    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 3, rates: storedRates, business: { ...base.settings.business, ...r.settings.business } },
     projects: (r.projects ?? []).map((p) => ({ ...p, input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,

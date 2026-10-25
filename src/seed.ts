@@ -61,9 +61,12 @@ export const materialsV2: Material[] = [
 ]
 export const materialsV1Ids = materials.map((m) => m.id)
 
+/** privzete cene pred v3 (za migracijo) */
+export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, markupPct: 50 } as const
+
 export const rates: Rates = {
-  scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, km: 0.3, minOrder: 15,
-  markupPct: 50, reservePct: 10, friendDiscountPct: 15,
+  scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
+  markupPct: 100, reservePct: 10, friendDiscountPct: 15,
 }
 
 export const business: Business = {
@@ -71,7 +74,7 @@ export const business: Business = {
   taxPct: 0, vatEnabled: false, vatPct: 22,
 }
 
-export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), rates, business })
+export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 3, rates, business })
 
 export const digitalLabels: Record<DigitalKind, string> = {
   raw: 'Surov 3D-sken (OBJ/STL)',
@@ -112,6 +115,6 @@ export const demoJob = (): JobInput => ({
   orderType: 'kombinirano',
   printerId: 'x2d', materialId: 'bambu-asa',
   pieces: 4, gramsPerPiece: 192, hoursPerPiece: 4, minutesPerPiece: 42,
-  consumables: 3.4, reservePct: 10, markupPct: 50,
+  consumables: 3.4, reservePct: 10, markupPct: 100,
   scanH: 1, editH: 1, cadH: 0.75, prepH: 0.25, finishH: 0.5, km: 0,
 })

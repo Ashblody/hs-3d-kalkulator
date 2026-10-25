@@ -19,15 +19,15 @@ describe('demo projekt Nosilci lučk', () => {
     expect(r2(res.printCost)).toBeLessThanOrEqual(35.6)
     expect(res.printCost).toBeCloseTo((res.material + res.electricity + res.wear + 3.4) * 1.1, 10)
   })
-  it('prodajna cena tiska = stroški × 1,5', () => {
-    expect(res.printSale).toBeCloseTo(res.printCost * 1.5, 10)
-    expect(r2(res.printSale)).toBeGreaterThanOrEqual(53.1)
-    expect(r2(res.printSale)).toBeLessThanOrEqual(53.4)
+  it('prodajna cena tiska = stroški × 2', () => {
+    expect(res.printSale).toBeCloseTo(res.printCost * 2, 10)
+    expect(r2(res.printSale)).toBeGreaterThanOrEqual(70.9)
+    expect(r2(res.printSale)).toBeLessThanOrEqual(71.1)
   })
-  it('storitve 78,75', () => expect(r2(res.services)).toBe(78.75))
-  it('končna cena ~132', () => {
-    expect(res.net).toBeCloseTo(res.printSale + 78.75, 10)
-    expect(Math.abs(res.net - 132.2)).toBeLessThan(0.5)
+  it('storitve 61,25', () => expect(r2(res.services)).toBe(61.25))
+  it('končna cena 132,22', () => {
+    expect(res.net).toBeCloseTo(res.printSale + 61.25, 10)
+    expect(r2(res.net)).toBe(132.22)
   })
   it('izpis točnih vrednosti', () => {
     console.log(JSON.stringify({ material: r2(res.material), elektrika: r2(res.electricity), amortizacija: r2(res.wear), rezerva: r2(res.reserve), strosekTiska: r2(res.printCost), prodajaTiska: r2(res.printSale), storitve: r2(res.services), koncna: r2(res.net) }))
@@ -46,12 +46,12 @@ describe('pravila', () => {
     const a = calculate(j, s), b = calculate({ ...j, mode: 'stranka' }, s)
     expect(a.printSale).toBeCloseTo(b.printSale)
     expect(a.transport).toBeCloseTo(b.transport)
-    expect(a.services).toBeCloseTo(78.75 * 0.85)
+    expect(a.services).toBeCloseTo(61.25 * 0.85)
   })
   it('zase: samo stroški, čas informativno', () => {
     const a = calculate({ ...demoJob(), mode: 'zase' }, s)
     expect(a.net).toBeCloseTo(a.printCost)
-    expect(r2(a.timeValue)).toBe(78.75)
+    expect(r2(a.timeValue)).toBe(61.25)
   })
   it('minimalno naročilo', () => {
     const a = calculate({ ...demoJob(), scanH: 0, editH: 0, cadH: 0, prepH: 0, finishH: 0, pieces: 1, gramsPerPiece: 5, hoursPerPiece: 0, minutesPerPiece: 20, consumables: 0 }, s)
@@ -64,7 +64,7 @@ describe('pravila', () => {
   })
   it('ročna sprememba stroškov', () => {
     const a = calculate({ ...demoJob(), printCostOverride: 40 }, s)
-    expect(a.printSale).toBeCloseTo(60)
+    expect(a.printSale).toBeCloseTo(80)
   })
 })
 
@@ -75,7 +75,7 @@ describe('varnostna kopija', () => {
     const s = initialState()
     const back = normalize(JSON.parse(JSON.stringify(s)))
     expect(back.projects[0].input.name).toBe('Nosilci lučk – 2 leva + 2 desna')
-    expect(r2(calculate(back.projects[0].input, back.projects[0].snapshot).net)).toBe(131.98)
+    expect(r2(calculate(back.projects[0].input, back.projects[0].snapshot).net)).toBe(132.22)
   })
   it('zavrne neveljavno datoteko', () => {
     expect(() => normalize({ foo: 1 })).toThrow()
@@ -95,5 +95,17 @@ describe('migracija materialov', () => {
     for (const m of materialsV2) expect(st.settings.materials.some((x) => x.id === m.id)).toBe(true)
     const again = normalize(st)
     expect(again.settings.materials.length).toBe(st.settings.materials.length)
+  })
+})
+
+describe('migracija cenika v3', () => {
+  it('posodobi samo stare privzete vrednosti', () => {
+    const old = defaultSettings()
+    delete old.ratesVersion
+    old.rates = { ...old.rates, scan: 25, edit: 20, cad: 25, reverse: 30, prep: 22, markupPct: 50 }
+    const st = normalize({ settings: old, projects: [] })
+    expect(st.settings.rates).toMatchObject({ scan: 20, edit: 15, cad: 20, reverse: 25, prep: 22, markupPct: 100, km: 0.3, minOrder: 15, reservePct: 10, friendDiscountPct: 15 })
+    const again = normalize({ settings: { ...st.settings, rates: { ...st.settings.rates, scan: 25 } }, projects: [] })
+    expect(again.settings.rates.scan).toBe(25)
   })
 })

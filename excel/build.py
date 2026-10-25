@@ -71,8 +71,8 @@ for r in range(4,MATEND+1):
 # ---------- Cenik ----------
 cn=wb.create_sheet('Cenik storitev')
 header(cn,'Cenik storitev',{'A':38,'B':14,'C':8})
-rates=[('3D-skeniranje',25,'€/h'),('Urejanje skena',20,'€/h'),('CAD-modeliranje',25,'€/h'),('Zahtevnejši reverse engineering',30,'€/h'),
-('Priprava tiska in dodelava',20,'€/h'),('Prevoz',0.30,'€/km'),('Minimalno naročilo',15,'€'),('Privzeti pribitek tiska',50,'%'),
+rates=[('3D-skeniranje',20,'€/h'),('Urejanje skena',15,'€/h'),('CAD-modeliranje',20,'€/h'),('Zahtevnejši reverse engineering',25,'€/h'),
+('Priprava tiska in dodelava',15,'€/h'),('Prevoz',0.30,'€/km'),('Minimalno naročilo',15,'€'),('Privzeti pribitek tiska',100,'%'),
 ('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%')]
 for i,(l,v,u) in enumerate(rates):
     r=3+i; cn.cell(r,1,l); c=cn.cell(r,2,v); inp(c,N2); cn.cell(r,3,u)
@@ -240,7 +240,7 @@ k.freeze_panes='A3'
 pj=wb.create_sheet('Projekti')
 header(pj,'Projekti',{c:w for c,w in zip('ABCDEFGHIJKLM',[12,30,14,11,12,13,13,13,10,10,11,11,24])})
 thead(pj,3,['Datum','Projekt','Stranka','Način','Status','Končna cena','Stroški','Zaslužek','Ure ocena','Ure dejansko','Material g ocena','Material g dejansko','Opomba'])
-pj.append([date(2026,10,25),'Nosilci lučk – 2 leva + 2 desna','Demo','Stranka','Osnutek',131.98,35.49,72.34,3.5,None,768,None,'demo'])
+pj.append([date(2026,10,25),'Nosilci lučk – 2 leva + 2 desna','Demo','Stranka','Osnutek',132.22,35.49,72.58,3.5,None,768,None,'demo'])
 dvS=DataValidation(type='list',formula1='"Osnutek,Ponudba,Potrjeno,V izdelavi,Zaključeno"'); pj.add_data_validation(dvS); dvS.add('E4:E200')
 dvM=DataValidation(type='list',formula1='"Stranka,Prijatelj,Zase"'); pj.add_data_validation(dvM); dvM.add('D4:D200')
 for r in range(4,60):
@@ -250,4 +250,4 @@ pj['A62']='Vnesi vrednosti iz Kalkulatorja (Kopiraj → Prilepi kot vrednosti), 
 pj.freeze_panes='A4'
 
 for ws in wb.worksheets: ws.sheet_properties.tabColor={'Kalkulator':'F97316'}.get(ws.title,'0F172A')
-wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v2.xlsx')
+wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v3.xlsx')

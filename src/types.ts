@@ -92,7 +92,7 @@ export interface JobInput {
   rights: { physicalOnly: boolean; personalUse: boolean; commercial: boolean; sourceCad: boolean }
 }
 
-export interface Settings { printers: Printer[]; materials: Material[]; materialSeeds?: string[]; rates: Rates; business: Business }
+export interface Settings { printers: Printer[]; materials: Material[]; materialSeeds?: string[]; ratesVersion?: number; rates: Rates; business: Business }
 
 export interface Actuals { printHours: number; grams: number; laborHours: number }
 
