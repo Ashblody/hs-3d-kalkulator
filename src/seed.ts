@@ -25,6 +25,42 @@ export const materials: Material[] = [
   m('pm-petgcf', 'Prusament PETG-CF', 'Prusa', 'PETG-CF', 60),
 ]
 
+/** cene preverjene 25. 10. 2026 (z DDV); povezave v opombi `source` */
+const x = (id: string, name: string, maker: string, type: string, spoolG: number, regular: number, sale: [string, number] | null, source: string, dryTemp?: string): Material => ({
+  id, name, maker, type, spoolG, prices: sale ? [{ label: 'Redna', price: regular }, { label: sale[0], price: sale[1] }] : [{ label: 'Redna', price: regular }],
+  activePrice: 0, source, ...(dryTemp ? { dryTemp } : {}),
+})
+const BB = 'https://eu.store.bambulab.com/products/'
+const PR = 'https://www.prusa3d.com/de/kategorie/'
+const TR = 'https://3dtrcek.com/sl/'
+
+/** v2: dodani materiali (migracija jih doda obstoječim uporabnikom) */
+export const materialsV2: Material[] = [
+  x('bb2-pla', 'Bambu PLA Basic (1 kg)', 'Bambu Lab', 'PLA', 1000, 16.99, ['Bulk 10+', 11.04], BB + 'pla-basic-filament'),
+  x('bb2-petghf', 'Bambu PETG HF (1 kg)', 'Bambu Lab', 'PETG', 1000, 19.99, ['Bulk 10+', 12.99], BB + 'petg-hf'),
+  x('bb2-petgb', 'Bambu PETG Basic (1 kg)', 'Bambu Lab', 'PETG', 1000, 15.99, ['Bulk 10+', 10.39], BB + 'petg-basic'),
+  x('bb2-asa', 'Bambu ASA (1 kg)', 'Bambu Lab', 'ASA', 1000, 24.99, null, BB + 'asa-filament'),
+  x('bb2-abs', 'Bambu ABS (1 kg)', 'Bambu Lab', 'ABS', 1000, 16.99, ['Bulk 10+', 11.04], BB + 'abs-filament'),
+  x('bb2-pc', 'Bambu PC (1 kg)', 'Bambu Lab', 'PC', 1000, 42.99, null, BB + 'pc-filament'),
+  x('bb2-pa6cf', 'Bambu PA6-CF najlon (1 kg)', 'Bambu Lab', 'PA', 1000, 44.99, null, BB + 'pa6-cf'),
+  x('pm2-pla', 'Prusament PLA (1 kg)', 'Prusa', 'PLA', 1000, 32.99, ['Akcija -20 %', 26.39], PR + 'prusament-pla/'),
+  x('pm2-petg', 'Prusament PETG (1 kg)', 'Prusa', 'PETG', 1000, 32.99, ['Akcija -20 %', 26.39], PR + 'prusament-petg/'),
+  x('pm2-petg2', 'Prusament PETG (2 kg)', 'Prusa', 'PETG', 2000, 54.99, ['Akcija -30 %', 38.49], PR + 'prusament-petg/'),
+  x('pm2-asa', 'Prusament ASA (800 g)', 'Prusa', 'ASA', 800, 30.99, ['Akcija -20 %', 24.79], PR + 'prusament-asa/'),
+  x('pm2-pc', 'Prusament PC Blend (900 g)', 'Prusa', 'PC', 900, 50.99, ['Akcija -40 %', 30.59], PR + 'prusament-pc-blend/'),
+  x('pm2-pa11', 'Prusament PA11 Natural najlon (800 g)', 'Prusa', 'PA', 800, 107, ['Akcija -20 %', 85.6], PR + 'prusament-pa-nylon/'),
+  x('tr2-pla', 'Trček PLA (1 kg)', 'Plastika Trček', 'PLA', 1000, 19.49, ['20+ kosov', 11.69], TR + 'pla-filament', '50 °C'),
+  x('tr2-pla5', 'Trček PLA (5 kg)', 'Plastika Trček', 'PLA', 5000, 99.95, null, TR + 'pla-filament', '50 °C'),
+  x('tr2-petg', 'Trček PETG (1 kg)', 'Plastika Trček', 'PETG', 1000, 19.49, ['20+ kosov', 11.69], TR + 'petg-filament', '60 °C, 2–4 h'),
+  x('tr2-petg10', 'Trček PETG (10 kg)', 'Plastika Trček', 'PETG', 10000, 188.9, null, TR + 'petg-filament', '60 °C, 2–4 h'),
+  x('tr2-asa', 'Trček ASA+ (800 g)', 'Plastika Trček', 'ASA', 800, 21.9, ['20+ kosov', 13.14], TR + 'asa-plus-filament', '60 °C, 4–8 h'),
+  x('tr2-abs', 'Trček ABS+ (1 kg)', 'Plastika Trček', 'ABS', 1000, 21.99, null, TR + 'abs-plus-filament', '60 °C, 4–8 h'),
+  x('tr2-pc', 'Trček PC (1 kg)', 'Plastika Trček', 'PC', 1000, 47.99, null, TR + 'pc-filament'),
+  x('tr2-pa12', 'Trček Nylon PA12 (700 g)', 'Plastika Trček', 'PA', 700, 33.99, null, TR + 'nylon-pa-12-filament'),
+  x('tr2-pctg', 'Trček PCTG (1 kg)', 'Plastika Trček', 'PCTG', 1000, 27.99, ['20+ kosov', 16.79], TR + 'pctg-filament'),
+]
+export const materialsV1Ids = materials.map((m) => m.id)
+
 export const rates: Rates = {
   scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, km: 0.3, minOrder: 15,
   markupPct: 50, reservePct: 10, friendDiscountPct: 15,
@@ -35,7 +71,7 @@ export const business: Business = {
   taxPct: 0, vatEnabled: false, vatPct: 22,
 }
 
-export const defaultSettings = (): Settings => structuredClone({ printers, materials, rates, business })
+export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), rates, business })
 
 export const digitalLabels: Record<DigitalKind, string> = {
   raw: 'Surov 3D-sken (OBJ/STL)',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { JobInput, Project, Settings } from './types'
-import { defaultSettings, demoJob, emptyJob } from './seed'
+import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2 } from './seed'
 import { uid } from './format'
 
 export interface AppState { version: 1; settings: Settings; projects: Project[]; current: JobInput; currentId: string | null; dark: boolean }
@@ -23,9 +23,15 @@ export function normalize(raw: unknown): AppState {
   const r = raw as Partial<AppState>
   if (!r || typeof r !== 'object' || !r.settings) throw new Error('Neveljavna datoteka')
   const fixJob = (j: Partial<JobInput>) => ({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } })
+  // migracija: dodaj nove privzete materiale, ne prepiši urejenih in ne vrni izbrisanih
+  const seen = new Set(r.settings.materialSeeds ?? materialsV1Ids)
+  const have = new Set((r.settings.materials ?? []).map((m) => m.id))
+  const allSeeds = [...seedV1, ...materialsV2]
+  const appended = allSeeds.filter((m) => !seen.has(m.id) && !have.has(m.id)).map((m) => structuredClone(m))
+  const materials = [...(r.settings.materials ?? base.settings.materials), ...appended]
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, rates: { ...base.settings.rates, ...r.settings.rates }, business: { ...base.settings.business, ...r.settings.business } },
+    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), rates: { ...base.settings.rates, ...r.settings.rates }, business: { ...base.settings.business, ...r.settings.business } },
     projects: (r.projects ?? []).map((p) => ({ ...p, input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,

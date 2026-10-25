@@ -81,3 +81,20 @@ describe('varnostna kopija', () => {
     expect(() => normalize({ foo: 1 })).toThrow()
   })
 })
+
+import { normalize } from './store'
+import { materialsV2 } from './seed'
+describe('migracija materialov', () => {
+  it('doda nove, ohrani urejene in ne vrne izbrisanih', () => {
+    const old = defaultSettings()
+    old.materials = old.materials.filter((m) => !m.id.startsWith('bb2-') && !m.id.startsWith('pm2-') && !m.id.startsWith('tr2-') && m.id !== 'pm-asa')
+    delete old.materialSeeds
+    old.materials[0].prices[0].price = 99
+    const st = normalize({ settings: old, projects: [] })
+    expect(st.settings.materials[0].prices[0].price).toBe(99)
+    expect(st.settings.materials.find((m) => m.id === 'pm-asa')).toBeUndefined()
+    for (const m of materialsV2) expect(st.settings.materials.some((x) => x.id === m.id)).toBe(true)
+    const again = normalize(st)
+    expect(again.settings.materials.length).toBe(st.settings.materials.length)
+  })
+})

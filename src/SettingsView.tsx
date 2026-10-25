@@ -91,7 +91,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
                 ))}
               </div>
               <div className="flex justify-between items-center mt-2 text-sm">
-                <span className="text-emerald-600 font-semibold">{eur(pricePerKg(m))}/kg</span>
+                <span className="text-emerald-600 font-semibold">{eur(pricePerKg(m))}/kg{m.source && <a className="ml-2 text-xs text-orange-600 underline font-normal" href={m.source} target="_blank" rel="noreferrer">vir cene</a>}</span>
                 <div className="flex gap-2">
                   <button className="btn" onClick={() => setM(i, { prices: [...m.prices, { label: 'Akcijska', price: m.prices[0]?.price ?? 0 }] })}>+ cena</button>
                   <button className="btn" onClick={() => confirm(`Izbrišem ${m.name}?`) && onChange({ ...s, materials: s.materials.filter((_, j) => j !== i) })}>Izbriši</button>
