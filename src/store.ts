@@ -24,6 +24,15 @@ export const migrateStatus = (s: string | undefined): Status => statusMap[s ?? '
 export const duplicateProject = (p: Project, settings: Settings): Project =>
   newProject({ ...structuredClone(p.input), name: `${p.input.name} (kopija)`, date: new Date().toISOString().slice(0, 10) }, settings)
 
+/** poslovne nastavitve: 0 je veljavna vrednost; neveljavno (NaN, null, negativno, besedilo) → privzeto */
+export function fixBusiness(base: Settings['business'], stored: Partial<Settings['business']> | undefined): Settings['business'] {
+  const out = { ...base, ...(stored ?? {}) } as Settings['business']
+  for (const k of Object.keys(base) as (keyof Settings['business'])[]) {
+    if (typeof base[k] === 'number') { const v = Number(out[k]); (out as any)[k] = out[k] !== null && out[k] !== '' as any && Number.isFinite(v) && v >= 0 ? v : base[k] }
+  }
+  return out
+}
+
 /** dopolni manjkajoča polja (npr. po uvozu starejše kopije) */
 export function normalize(raw: unknown): AppState {
   const base = initialState()
@@ -45,7 +54,7 @@ export function normalize(raw: unknown): AppState {
   for (const k of ['fileHandoverFee', 'repeatSalePct']) delete (storedRates as unknown as Record<string, unknown>)[k]
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 3, rates: storedRates, business: { ...base.settings.business, ...r.settings.business } },
+    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 3, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
     projects: (r.projects ?? []).map((p) => ({ ...p, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,
