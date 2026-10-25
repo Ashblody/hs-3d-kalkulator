@@ -82,7 +82,6 @@ describe('varnostna kopija', () => {
   })
 })
 
-import { normalize } from './store'
 import { materialsV2 } from './seed'
 describe('migracija materialov', () => {
   it('doda nove, ohrani urejene in ne vrne izbrisanih', () => {
