@@ -22,7 +22,7 @@ export function normalize(raw: unknown): AppState {
   const base = initialState()
   const r = raw as Partial<AppState>
   if (!r || typeof r !== 'object' || !r.settings) throw new Error('Neveljavna datoteka')
-  const fixJob = (j: Partial<JobInput>) => ({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } })
+  const fixJob = (j: Partial<JobInput>) => ({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { ...emptyJob().fileSale, ...(j?.fileSale ?? {}) }, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } })
   // migracija: dodaj nove privzete materiale, ne prepiši urejenih in ne vrni izbrisanih
   const seen = new Set(r.settings.materialSeeds ?? materialsV1Ids)
   const have = new Set((r.settings.materials ?? []).map((m) => m.id))

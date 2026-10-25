@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculate, markupToMargin, r2, totalPrintHours, wearPerHour } from './calc'
+import { calculate, fileSaleInfo, markupToMargin, r2, totalPrintHours, wearPerHour } from './calc'
 import { defaultSettings, demoJob } from './seed'
 
 describe('demo projekt Nosilci lučk', () => {
@@ -108,6 +108,41 @@ describe('stopnje', () => {
     const s2 = { ...s, rates: { ...s.rates, friendPrintHourly: 2 } }
     const a = calculate({ ...demoJob(), mode: 'prijatelj' }, s2)
     expect(a.printSale).toBeCloseTo(a.printCost + a.printHours * 2)
+  })
+})
+
+describe('datoteke iz storitev', () => {
+  const s = defaultSettings()
+  const f = (kind: 'stl' | 'step', context: 'zDelom' | 'samostojno' | 'ponovna', mode: 'stranka' | 'prijatelj' | 'zase' = 'stranka', override: number | null = null) =>
+    calculate({ ...demoJob(), mode, fileSale: { kind, context, override } }, s)
+  const base = calculate(demoJob(), s)
+  it('izpis', () => {
+    for (const k of ['stl', 'step'] as const) for (const c of ['samostojno', 'zDelom', 'ponovna'] as const) for (const m of ['stranka', 'prijatelj', 'zase'] as const) {
+      const x = f(k, c, m); console.log('FILE', k, c, m, JSON.stringify({ datoteka: r2(x.digital), storitve: r2(x.services), skupaj: r2(x.net) }))
+    }
+  })
+  it('STL 35 / STEP 50 samostojno', () => {
+    expect(fileSaleInfo({ ...demoJob(), fileSale: { kind: 'stl', context: 'samostojno', override: null } }, s).price).toBe(35)
+    expect(r2(f('step', 'samostojno').digital)).toBe(50)
+  })
+  it('samostojno ne obračuna dvakrat', () => {
+    expect(r2(f('step', 'samostojno').net)).toBe(r2(base.net))
+    expect(r2(f('stl', 'samostojno').net)).toBe(r2(base.net))
+  })
+  it('z naročilom: datoteka zastonj (predaja 0)', () => {
+    expect(f('step', 'zDelom').digital).toBe(0)
+    const s2 = { ...s, rates: { ...s.rates, fileHandoverFee: 5 } }
+    expect(calculate({ ...demoJob(), fileSale: { kind: 'step', context: 'zDelom', override: null } }, s2).digital).toBe(5)
+  })
+  it('ponovna prodaja 30 %', () => expect(r2(f('step', 'ponovna').digital)).toBe(15))
+  it('prijatelj -15 %, zase 0', () => {
+    expect(r2(f('step', 'samostojno', 'prijatelj').digital)).toBe(42.5)
+    expect(f('step', 'samostojno', 'zase').digital).toBe(0)
+  })
+  it('ročni prepis', () => expect(f('stl', 'samostojno', 'stranka', 80).digital).toBe(80))
+  it('ročne digitalne postavke še delujejo', () => {
+    const j = demoJob(); j.digital.raw = { on: true, hours: 1, rate: 20, extra: 5 }
+    expect(calculate(j, s).digital).toBe(25)
   })
 })
 

@@ -73,10 +73,10 @@ cn=wb.create_sheet('Cenik storitev')
 header(cn,'Cenik storitev',{'A':38,'B':14,'C':8})
 rates=[('3D-skeniranje',20,'€/h'),('Urejanje skena',15,'€/h'),('CAD-modeliranje',20,'€/h'),('Zahtevnejši reverse engineering',25,'€/h'),
 ('Priprava tiska in dodelava',15,'€/h'),('Prevoz',0.30,'€/km'),('Minimalno naročilo',15,'€'),('Privzeti pribitek tiska',100,'%'),
-('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%'),('Prijatelj: cena na uro tiskanja (namesto pribitka)',1,'€/h')]
+('Privzeta rezerva za neuspele tiske',10,'%'),('Prijateljski popust (samo storitve)',15,'%'),('Prijatelj: cena na uro tiskanja (namesto pribitka)',1,'€/h'),('Predaja datoteke, ko so storitve že v projektu',0,'€'),('Ponovna prodaja datoteke',30,'% prvotne')]
 for i,(l,v,u) in enumerate(rates):
     r=3+i; cn.cell(r,1,l); c=cn.cell(r,2,v); inp(c,N2); cn.cell(r,3,u)
-R={k:f"'Cenik storitev'!$B${3+i}" for i,k in enumerate(['scan','edit','cad','rev','prep','km','min','markup','reserve','friend','friendH'])}
+R={k:f"'Cenik storitev'!$B${3+i}" for i,k in enumerate(['scan','edit','cad','rev','prep','km','min','markup','reserve','friend','friendH','handover','repeat'])}
 
 # ---------- Poslovne ----------
 ps=wb.create_sheet('Poslovne nastavitve')
@@ -117,6 +117,22 @@ dt['G10']='=SUM(G4:G9)'; dt['G10'].number_format=N2
 dt['A12']='Pravice'; dt['A12'].font=Font(bold=True,size=12)
 for i,(l,v) in enumerate([('Samo fizični izdelek, brez datotek','DA'),('Datoteka za osebno uporabo naročnika','NE'),('Pravica do komercialne uporabe','NE'),('Prenos izvorne CAD-datoteke','NE')]):
     r=13+i; dt.cell(r,1,l); c=dt.cell(r,2,v); inp(c); dvDN2.add(f'B{r}')
+dt['A20']='Samodejna cena datoteke iz ur storitev (Kalkulator C26:C29)'; dt['A20'].font=Font(bold=True,size=12)
+dvF=DataValidation(type='list',formula1='"Brez,STL,STEP"'); dt.add_data_validation(dvF)
+dvC=DataValidation(type='list',formula1='"Z naročilom,Samostojno,Ponovna"'); dt.add_data_validation(dvC)
+for r,l,v in [(21,'Vrsta datoteke (Brez / STL / STEP)','Brez'),(22,'Prodaja (Z naročilom / Samostojno / Ponovna)','Z naročilom'),(23,'Ročna cena € (prazno = predlog)',None)]:
+    dt.cell(r,1,l); c=dt.cell(r,2,v); inp(c, EUR if r==23 else None)
+dvF.add('B21'); dvC.add('B22')
+for r,l,f in [(21,'STL = sken + urejanje',f"=Kalkulator!$C$26*{R['scan']}+Kalkulator!$C$27*{R['edit']}"),
+ (22,'STEP = STL + CAD + zahtevni CAD',f"=F21+Kalkulator!$C$28*{R['cad']}+Kalkulator!$C$29*{R['rev']}"),
+ (23,'Prvotna cena izbrane datoteke','=IF(B21="STL",F21,IF(B21="STEP",F22,0))'),
+ (24,'Predlog',f'=IF(B21="Brez",0,IF(B22="Z naročilom",{R["handover"]},IF(B22="Ponovna",F23*{R["repeat"]}/100,F23)))'),
+ (25,'CENA DATOTEKE (pred popustom stopnje)','=IF(AND(B21<>"Brez",ISNUMBER(B23)),B23,F24)'),
+ (26,'Sken/urejanje ni obračunano kot storitev (1 = da)','=IF(AND(B21<>"Brez",B22<>"Z naročilom"),1,0)'),
+ (27,'CAD ni obračunan kot storitev (1 = da)','=IF(AND(F26=1,B21="STEP"),1,0)')]:
+    dt.cell(r,5,l); c=dt.cell(r,6,f); c.number_format=EUR if r<26 else '0'
+dt['F25'].font=Font(bold=True,color=GREEN)
+dt['A28']='Z naročilom: storitve so že obračunane, datoteka zastonj ali samo predaja. Samostojno/Ponovna: ure skena/CAD so v ceni datoteke in se ne obračunajo še kot storitve.'; dt['A28'].font=Font(italic=True,color='64748B')
 dt['A18']='Postavka STEP iz CAD (vrstica 7) in rekonstrukcija iz skena (vrstica 8) sta ločeni. Pravice vplivajo na ceno le prek ur in dodatnih stroškov.'; dt['A18'].font=Font(italic=True,color='64748B')
 
 # ---------- Kalkulator ----------
@@ -168,11 +184,11 @@ calc=[
 (28,'Pribitek € (Prijatelj: ure tiska × €/h)',f"=F26*F27/100+IF($C$7=\"Prijatelj\",F12*{R['friendH']},0)",EUR),
 (29,'Bruto marža tiska','=IF(F30>0,F28/F30,0)',PCT),
 (30,'Prodajna cena tiska','=F26+F28',EUR),
-(32,'Storitve po ceniku',f"=$C$26*{R['scan']}+$C$27*{R['edit']}+$C$28*{R['cad']}+$C$29*{R['rev']}+$C$30*{R['prep']}+$C$31*{R['prep']}+$C$32*$C$33",EUR),
+(32,'Storitve po ceniku',f"=($C$26*{R['scan']}+$C$27*{R['edit']})*(1-Datoteke!$F$26)+($C$28*{R['cad']}+$C$29*{R['rev']})*(1-Datoteke!$F$27)+$C$30*{R['prep']}+$C$31*{R['prep']}+$C$32*$C$33",EUR),
 (33,'Popust prijatelj %','=IF($C$7="Prijatelj",$C$34/100,0)',PCT),
 (34,'Popust / ni obračunano (Zase)',f'=IF({Z},F32,F32*F33)',EUR),
 (35,'Storitve (obračunano)','=F32-F34',EUR),
-(36,'Digitalne datoteke',f'=IF({Z},0,Datoteke!$F$10*(1-F33))',EUR),
+(36,'Digitalne datoteke',f'=IF({Z},0,(Datoteke!$F$10+Datoteke!$F$25)*(1-F33))',EUR),
 (37,'Prevoz',f"=$C$36*{R['km']}",EUR),
 (38,'Pakiranje + dostava + ostalo','=$C$37+$C$38+$C$39',EUR),
 (39,'Popust',f'=IF({Z},0,$C$40)',EUR),
@@ -182,8 +198,8 @@ calc=[
 (43,'DDV',f"=IF(AND({B['vat']}=\"DA\",NOT({Z})),F42*{B['vatpct']}/100,0)",EUR),
 (44,'KONČNA CENA (z DDV, če je obračunan)','=F42+F43',EUR),
 (45,'Cena na kos','=IF($C$12>0,F44/$C$12,F44)',EUR),
-(47,'Ure dela','=SUM($C$26:$C$32)+Datoteke!$G$10',N2),
-(48,'Vrednost mojega časa (informativno)','=F32+Datoteke!$F$10',EUR),
+(47,'Ure dela','=SUM($C$26:$C$32)+Datoteke!$G$10-IF(Datoteke!$B$22="Ponovna",Datoteke!$F$26*($C$26+$C$27)+Datoteke!$F$27*($C$28+$C$29),0)',N2),
+(48,'Vrednost mojega časa (informativno)','=F32+Datoteke!$F$10+Datoteke!$F$25',EUR),
 (49,'Dejanski stroški','=F26+F37+F38',EUR),
 (50,'Delež fiksnih stroškov',f"=IF({B['hours']}>0,{B['fixed']}/{B['hours']}*F47,0)",EUR),
 (51,'Ocena davka',f"=IF({Z},0,F42*{B['tax']}/100)",EUR),
@@ -250,4 +266,4 @@ pj['A62']='Vnesi vrednosti iz Kalkulatorja (Kopiraj → Prilepi kot vrednosti), 
 pj.freeze_panes='A4'
 
 for ws in wb.worksheets: ws.sheet_properties.tabColor={'Kalkulator':'F97316'}.get(ws.title,'0F172A')
-wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v4.xlsx')
+wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v5.xlsx')

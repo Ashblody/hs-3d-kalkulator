@@ -66,7 +66,7 @@ export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, mar
 
 export const rates: Rates = {
   scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
-  markupPct: 100, reservePct: 10, friendDiscountPct: 15, friendPrintHourly: 1,
+  markupPct: 100, reservePct: 10, friendDiscountPct: 15, friendPrintHourly: 1, fileHandoverFee: 0, repeatSalePct: 30,
 }
 
 export const business: Business = {
@@ -103,6 +103,7 @@ export const emptyJob = (r: Rates = rates): JobInput => ({
   scanH: 0, editH: 0, cadH: 0, reverseH: 0, prepH: 0, finishH: 0, extraWorkH: 0, extraWorkRate: r.prep,
   km: 0, packaging: 0, delivery: 0, otherCosts: 0, discount: 0, friendDiscountPct: r.friendDiscountPct,
   digital: emptyDigital(r),
+  fileSale: { kind: 'none', context: 'zDelom', override: null },
   rights: { physicalOnly: true, personalUse: false, commercial: false, sourceCad: false },
 })
 
