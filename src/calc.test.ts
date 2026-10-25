@@ -67,3 +67,17 @@ describe('pravila', () => {
     expect(a.printSale).toBeCloseTo(60)
   })
 })
+
+import { normalize, initialState } from './store'
+describe('varnostna kopija', () => {
+  it('izvoz/uvoz ohrani podatke', () => {
+    ;(globalThis as any).window = { matchMedia: () => ({ matches: false }) }
+    const s = initialState()
+    const back = normalize(JSON.parse(JSON.stringify(s)))
+    expect(back.projects[0].input.name).toBe('Nosilci lučk – 2 leva + 2 desna')
+    expect(r2(calculate(back.projects[0].input, back.projects[0].snapshot).net)).toBe(131.98)
+  })
+  it('zavrne neveljavno datoteko', () => {
+    expect(() => normalize({ foo: 1 })).toThrow()
+  })
+})

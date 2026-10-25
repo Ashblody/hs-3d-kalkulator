@@ -4,15 +4,24 @@ import SettingsView from './SettingsView'
 import ProjectsView from './ProjectsView'
 import { newProject, usePersistentState } from './store'
 import { emptyJob } from './seed'
-import type { Project } from './types'
+import type { JobInput, Project, Settings } from './types'
+import Dashboard from './Dashboard'
+import Quote from './Quote'
+import { exportJson, importJson } from './backup'
 
-type Tab = 'kalk' | 'projekti' | 'nastavitve'
-const tabs: [Tab, string][] = [['kalk', 'Kalkulator'], ['projekti', 'Projekti'], ['nastavitve', 'Nastavitve']]
+type Tab = 'kalk' | 'projekti' | 'posel' | 'nastavitve'
+const tabs: [Tab, string][] = [['kalk', 'Kalkulator'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
 
 export default function App() {
   const [st, setSt] = usePersistentState()
   const [tab, setTab] = useState<Tab>('kalk')
   const [msg, setMsg] = useState('')
+  const [quote, setQuote] = useState<{ job: JobInput; settings: Settings; number: string } | null>(null)
+  const printQuote = (job: JobInput, settings: Settings, id: string) => {
+    setQuote({ job, settings, number: `${job.date.replace(/-/g, '')}-${id.slice(0, 4).toUpperCase()}` })
+    const prev = document.title; document.title = `HS3D ponudba ${job.name}`
+    setTimeout(() => { window.print(); document.title = prev }, 100)
+  }
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 2500) }
 
   const project = st.projects.find((p) => p.id === st.currentId)
@@ -36,12 +45,15 @@ export default function App() {
     <div className="card flex flex-wrap gap-2 no-print">
       <button className="btn-p" onClick={save}>{project ? 'Shrani projekt' : 'Shrani kot nov projekt'}</button>
       <button className="btn" onClick={() => setSt({ ...st, current: emptyJob(st.settings.rates), currentId: null })}>Nov izračun</button>
+      <button className="btn" onClick={() => printQuote(st.current, calcSettings, project?.id ?? 'nova')}>PDF ponudba</button>
       {project && <button className="btn" onClick={() => setSt({ ...st, projects: st.projects.map((p) => (p.id === project.id ? { ...p, snapshot: structuredClone(st.settings) } : p)) })}>Uporabi trenutni cenik</button>}
     </div>
   )
 
   return (
     <div className="min-h-screen text-slate-800 dark:text-slate-100">
+      {quote && <div className="hidden print:block"><Quote {...quote} /></div>}
+    <div className="no-print">
       <header className="sticky top-0 z-10 bg-slate-900 text-white no-print">
         <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="font-bold text-lg"><span className="text-orange-400">HS</span> 3D <span className="font-normal text-slate-400 text-sm">Kalkulator</span></div>
@@ -59,9 +71,24 @@ export default function App() {
         </>)}
         {tab === 'projekti' && <ProjectsView projects={st.projects} currentId={st.currentId} onOpen={open} onCopy={copy}
           onDelete={(p) => setSt({ ...st, projects: st.projects.filter((x) => x.id !== p.id), currentId: st.currentId === p.id ? null : st.currentId })}
+          onPdf={(p) => printQuote(p.input, p.snapshot, p.id)}
+          onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual } : x)) })}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />}
-        {tab === 'nastavitve' && <SettingsView s={st.settings} onChange={(settings) => setSt({ ...st, settings })} />}
+        {tab === 'posel' && <Dashboard projects={st.projects} settings={st.settings} />}
+        {tab === 'nastavitve' && (<>
+          <div className="card mb-4 flex flex-wrap gap-2 items-center">
+            <span className="font-semibold mr-auto">Varnostna kopija</span>
+            <button className="btn-p" onClick={() => exportJson(st)}>Izvozi JSON</button>
+            <label className="btn cursor-pointer">Uvozi JSON<input type="file" accept="application/json,.json" className="hidden" onChange={async (e) => {
+              const f = e.target.files?.[0]; if (!f) return
+              try { const s = await importJson(f); if (confirm(`Uvozim ${s.projects.length} projektov? Trenutni podatki bodo zamenjani.`)) { setSt(s); flash('Podatki obnovljeni') } } catch { alert('Datoteke ni mogoče prebrati.') }
+              e.target.value = ''
+            }} /></label>
+          </div>
+          <SettingsView s={st.settings} onChange={(settings) => setSt({ ...st, settings })} />
+        </>)}
       </main>
+    </div>
     </div>
   )
 }
