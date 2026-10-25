@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculate, fileSaleInfo, markupToMargin, r2, totalPrintHours, wearPerHour } from './calc'
-import { defaultSettings, demoJob } from './seed'
+import { defaultSettings, demoJob , emptyJob } from './seed'
 
 describe('demo projekt Nosilci lučk', () => {
   const s = defaultSettings()
@@ -69,7 +69,7 @@ describe('pravila', () => {
   })
 })
 
-import { normalize, initialState } from './store'
+import { normalize, initialState , startBlank, hasUnsaved } from './store'
 describe('varnostna kopija', () => {
   it('izvoz/uvoz ohrani podatke', () => {
     ;(globalThis as any).window = { matchMedia: () => ({ matches: false }) }
@@ -111,39 +111,41 @@ describe('stopnje', () => {
   })
 })
 
-describe('datoteke iz storitev', () => {
+describe('datoteka zraven tiska', () => {
   const s = defaultSettings()
-  const f = (kind: 'stl' | 'step', context: 'zDelom' | 'samostojno' | 'ponovna', mode: 'stranka' | 'prijatelj' | 'zase' = 'stranka', override: number | null = null) =>
-    calculate({ ...demoJob(), mode, fileSale: { kind, context, override } }, s)
-  const base = calculate(demoJob(), s)
-  it('izpis', () => {
-    for (const k of ['stl', 'step'] as const) for (const c of ['samostojno', 'zDelom', 'ponovna'] as const) for (const m of ['stranka', 'prijatelj', 'zase'] as const) {
-      const x = f(k, c, m); console.log('FILE', k, c, m, JSON.stringify({ datoteka: r2(x.digital), storitve: r2(x.services), skupaj: r2(x.net) }))
-    }
+  const f = (kind: 'none' | 'stl' | 'step', mode: 'stranka' | 'prijatelj' | 'zase' = 'stranka') => calculate({ ...demoJob(), mode, fileSale: { kind } }, s)
+  it('izpis', () => { for (const k of ['stl', 'step'] as const) for (const m of ['stranka', 'prijatelj', 'zase'] as const) { const x = f(k, m); console.log('FILE', k, m, JSON.stringify({ datoteka: r2(x.digital), storitve: r2(x.services), skupaj: r2(x.net), kos: r2(x.perPiece) })) } })
+  it('STL 15 / STEP 30, storitve normalno', () => {
+    expect(f('stl').digital).toBe(15); expect(f('step').digital).toBe(30)
+    expect(r2(f('step').services)).toBe(61.25)
+    expect(r2(f('step').net)).toBe(162.22)
   })
-  it('STL 35 / STEP 50 samostojno', () => {
-    expect(fileSaleInfo({ ...demoJob(), fileSale: { kind: 'stl', context: 'samostojno', override: null } }, s).price).toBe(35)
-    expect(r2(f('step', 'samostojno').digital)).toBe(50)
+  it('prijatelj -15 %, zase 0', () => { expect(r2(f('step', 'prijatelj').digital)).toBe(25.5); expect(f('stl', 'zase').digital).toBe(0) })
+  it('doplačilo je nastavitev', () => expect(calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, { ...s, rates: { ...s.rates, fileAddonStl: 20 } }).digital).toBe(20))
+  it('stari shranjeni posli se naložijo', () => {
+    const old = structuredClone(s) as unknown as { rates: Record<string, number> }; delete old.rates.fileAddonStl; delete old.rates.fileAddonStep; old.rates.repeatSalePct = 30
+    const st = normalize({ settings: old as never, projects: [], current: { ...demoJob(), fileSale: { kind: 'step', context: 'ponovna', override: 5 } as never } })
+    expect(st.settings.rates.fileAddonStl).toBe(15)
+    expect('repeatSalePct' in st.settings.rates).toBe(false)
+    expect(calculate(st.current, st.settings).digital).toBe(30)
   })
-  it('samostojno ne obračuna dvakrat', () => {
-    expect(r2(f('step', 'samostojno').net)).toBe(r2(base.net))
-    expect(r2(f('stl', 'samostojno').net)).toBe(r2(base.net))
-  })
-  it('z naročilom: datoteka zastonj (predaja 0)', () => {
-    expect(f('step', 'zDelom').digital).toBe(0)
-    const s2 = { ...s, rates: { ...s.rates, fileHandoverFee: 5 } }
-    expect(calculate({ ...demoJob(), fileSale: { kind: 'step', context: 'zDelom', override: null } }, s2).digital).toBe(5)
-  })
-  it('ponovna prodaja 30 %', () => expect(r2(f('step', 'ponovna').digital)).toBe(15))
-  it('prijatelj -15 %, zase 0', () => {
-    expect(r2(f('step', 'samostojno', 'prijatelj').digital)).toBe(42.5)
-    expect(f('step', 'samostojno', 'zase').digital).toBe(0)
-  })
-  it('ročni prepis', () => expect(f('stl', 'samostojno', 'stranka', 80).digital).toBe(80))
   it('ročne digitalne postavke še delujejo', () => {
     const j = demoJob(); j.digital.raw = { on: true, hours: 1, rate: 20, extra: 5 }
     expect(calculate(j, s).digital).toBe(25)
   })
+})
+
+describe('nov projekt', () => {
+  it('prazen projekt: vnosi 0, 1 kos, brez datoteke, nastavitve ostanejo', () => {
+    const st0 = initialState(); st0.settings.rates.scan = 33
+    const st = startBlank(st0)
+    const j = st.current
+    expect([j.name, j.client, j.pieces, j.gramsPerPiece, j.hoursPerPiece, j.minutesPerPiece, j.km, j.scanH, j.cadH, j.fileSale.kind]).toEqual(['', '', 1, 0, 0, 0, 0, 0, 0, 'none'])
+    expect(st.settings.rates.scan).toBe(33); expect(st.settings.materials.length).toBe(st0.settings.materials.length); expect(st.currentId).toBeNull()
+    expect(hasUnsaved(st)).toBe(false)
+    expect(hasUnsaved({ ...st, current: { ...j, km: 5 } })).toBe(true)
+  })
+  it('datoteka privzeto Brez', () => expect(emptyJob().fileSale.kind).toBe('none'))
 })
 
 describe('migracija cenika v3', () => {

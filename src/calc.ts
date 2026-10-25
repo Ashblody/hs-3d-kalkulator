@@ -13,22 +13,11 @@ export const powerFor = (p: Printer, materialType: string) => p.powerW[materialT
 /** Pribitek -> bruto marža: 50 % pribitka = 33,33 % marže */
 export const markupToMargin = (markupPct: number) => (markupPct <= -100 ? 0 : (markupPct / (100 + markupPct)) * 100)
 
-/** Predlog cene datoteke iz ur storitev (pred popustom stopnje). STL = sken + urejanje; STEP = STL + CAD + zahtevnejši CAD. */
+/** Datoteka zraven tiska: fiksno doplačilo iz nastavitev (pred popustom stopnje). */
 export function fileSaleInfo(j: JobInput, s: Settings) {
-  const r = s.rates, f = j.fileSale ?? { kind: 'none', context: 'zDelom', override: null }
-  const stl = nz(j.scanH) * r.scan + nz(j.editH) * r.edit
-  const step = stl + nz(j.cadH) * r.cad + nz(j.reverseH) * r.reverse
-  const original = f.kind === 'stl' ? stl : f.kind === 'step' ? step : 0
-  const suggested = f.kind === 'none' ? 0
-    : f.context === 'zDelom' ? nz(r.fileHandoverFee)
-    : f.context === 'ponovna' ? original * nz(r.repeatSalePct) / 100
-    : original
-  const overridden = f.kind !== 'none' && f.override !== null && Number.isFinite(f.override) && f.override >= 0
-  const price = overridden ? (f.override as number) : suggested
-  // samostojna ali ponovna prodaja: ure, ki so v ceni datoteke, se ne obračunajo še kot storitve
-  const excl = f.kind !== 'none' && f.context !== 'zDelom'
-  const excludes = { scan: excl, edit: excl, cad: excl && f.kind === 'step', reverse: excl && f.kind === 'step' }
-  return { stl, step, original, suggested, overridden, price, excludes }
+  const k = j.fileSale?.kind ?? 'none'
+  const price = k === 'stl' ? nz(s.rates.fileAddonStl) : k === 'step' ? nz(s.rates.fileAddonStep) : 0
+  return { price }
 }
 
 export function totalPrintHours(j: JobInput) {
@@ -78,9 +67,9 @@ export function calculate(j: JobInput, s: Settings): Result {
   const markup = printSale - printCost
 
   const r = s.rates
-  const fs = fileSaleInfo(j, s), ex = fs.excludes
+  const fs = fileSaleInfo(j, s)
   const servicesStandard =
-    (ex.scan ? 0 : nz(j.scanH) * r.scan) + (ex.edit ? 0 : nz(j.editH) * r.edit) + (ex.cad ? 0 : nz(j.cadH) * r.cad) + (ex.reverse ? 0 : nz(j.reverseH) * r.reverse) +
+    nz(j.scanH) * r.scan + nz(j.editH) * r.edit + nz(j.cadH) * r.cad + nz(j.reverseH) * r.reverse +
     nz(j.prepH) * r.prep + nz(j.finishH) * r.prep + nz(j.extraWorkH) * nz(j.extraWorkRate)
   let digital = 0, digitalHours = 0
   for (const k of Object.keys(j.digital) as DigitalKind[]) {
@@ -90,7 +79,6 @@ export function calculate(j: JobInput, s: Settings): Result {
     digitalHours += nz(d.hours)
   }
   digital += fs.price
-  if (j.fileSale?.context === 'ponovna') digitalHours -= nz(j.scanH) + nz(j.editH) + (ex.cad ? nz(j.cadH) + nz(j.reverseH) : 0)
   const laborHours = nz(j.scanH) + nz(j.editH) + nz(j.cadH) + nz(j.reverseH) + nz(j.prepH) + nz(j.finishH) + nz(j.extraWorkH) + digitalHours
   const timeValue = servicesStandard + digital
   // prijateljski popust samo na storitve (in delo za datoteke), ne na material/prevoz/poštnino

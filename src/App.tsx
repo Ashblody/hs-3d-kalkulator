@@ -2,8 +2,7 @@ import { useState } from 'react'
 import Calculator from './Calculator'
 import SettingsView from './SettingsView'
 import ProjectsView from './ProjectsView'
-import { newProject, usePersistentState } from './store'
-import { emptyJob } from './seed'
+import { hasUnsaved, newProject, startBlank, usePersistentState } from './store'
 import type { JobInput, Project, Settings } from './types'
 import Dashboard from './Dashboard'
 import Quote from './Quote'
@@ -44,7 +43,7 @@ export default function App() {
   const actions = (
     <div className="card flex flex-wrap gap-2 no-print">
       <button className="btn-p" onClick={save}>{project ? 'Shrani projekt' : 'Shrani kot nov projekt'}</button>
-      <button className="btn" onClick={() => setSt({ ...st, current: emptyJob(st.settings.rates), currentId: null })}>Nov izračun</button>
+      <button className="btn" title="Prazen projekt: vse ure, grami, čas tiska in km na 0, 1 kos, brez datoteke. Nastavitve, materiali in tiskalniki ostanejo." onClick={() => { if (!hasUnsaved(st) || window.confirm('Trenutni projekt ni shranjen. Začnem nov prazen projekt in zavržem spremembe?')) { setSt(startBlank(st)); flash('Nov prazen projekt') } }}>Nov projekt</button>
       <button className="btn" onClick={() => printQuote(st.current, calcSettings, project?.id ?? 'nova')}>PDF ponudba</button>
       {project && <button className="btn" onClick={() => setSt({ ...st, projects: st.projects.map((p) => (p.id === project.id ? { ...p, snapshot: structuredClone(st.settings) } : p)) })}>Uporabi trenutni cenik</button>}
     </div>

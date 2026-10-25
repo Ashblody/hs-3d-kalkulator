@@ -27,10 +27,9 @@ export interface Material {
 }
 
 export interface Rates {
-  /** predaja datoteke, ko so storitve že obračunane v istem projektu */
-  fileHandoverFee: number
-  /** ponovna prodaja datoteke: % prvotne cene */
-  repeatSalePct: number
+  /** fiksni doplačili za datoteko zraven tiska */
+  fileAddonStl: number
+  fileAddonStep: number
   /** Prijatelj: € na uro tiskanja namesto % pribitka */
   friendPrintHourly: number
   scan: number
@@ -57,9 +56,7 @@ export interface Business {
 
 export type DigitalKind = 'raw' | 'stl' | 'cadstl' | 'step' | 'stepscan' | 'paket'
 export type FileSaleKind = 'none' | 'stl' | 'step'
-/** zDelom = storitve so obračunane v tem projektu (datoteka zastonj ali predaja) · samostojno = ure storitev se obračunajo kot cena datoteke · ponovna = ponovna prodaja že narejene datoteke */
-export type FileSaleContext = 'zDelom' | 'samostojno' | 'ponovna'
-export interface FileSale { kind: FileSaleKind; context: FileSaleContext; override: number | null }
+export interface FileSale { kind: FileSaleKind }
 export interface DigitalItem { on: boolean; hours: number; rate: number; extra: number }
 
 export interface JobInput {
@@ -99,7 +96,7 @@ export interface JobInput {
   discount: number
   friendDiscountPct: number
   digital: Record<DigitalKind, DigitalItem>
-  /** samodejni predlog cene datoteke iz ur storitev */
+  /** datoteka zraven tiska (fiksno doplačilo) */
   fileSale: FileSale
   rights: { physicalOnly: boolean; personalUse: boolean; commercial: boolean; sourceCad: boolean }
 }

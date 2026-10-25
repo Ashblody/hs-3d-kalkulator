@@ -81,19 +81,10 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
           <summary className="cursor-pointer select-none font-semibold text-slate-800 dark:text-slate-100">Prodaja digitalnih datotek</summary>
           <div className="mt-3 space-y-3">
             <div className="rounded-xl bg-sky-50 dark:bg-sky-900/20 p-3 space-y-2">
-              <div className="font-semibold text-sm">Samodejna cena datoteke iz ur storitev</div>
-              <div className="flex gap-2">{([['none', 'Brez'], ['stl', 'STL (urejen sken)'], ['step', 'STEP (parametrični)']] as const).map(([v, l]) => (
-                <button key={v} onClick={() => onChange({ ...job, fileSale: { ...job.fileSale, kind: v } })} className={`flex-1 rounded-xl px-2 py-1.5 text-sm font-semibold ${job.fileSale.kind === v ? 'bg-sky-600 text-white' : 'bg-white dark:bg-slate-800'}`}>{l}</button>))}</div>
-              {job.fileSale.kind !== 'none' && <>
-                <div className="flex gap-2">{([['zDelom', 'Z naročilom (storitve že obračunane)'], ['samostojno', 'Samostojna prodaja'], ['ponovna', `Ponovna prodaja (${num(settings.rates.repeatSalePct)} %)`]] as const).map(([v, l]) => (
-                  <button key={v} onClick={() => onChange({ ...job, fileSale: { ...job.fileSale, context: v } })} className={`flex-1 rounded-xl px-2 py-1.5 text-xs font-semibold ${job.fileSale.context === v ? 'bg-slate-700 text-white' : 'bg-white dark:bg-slate-800'}`}>{l}</button>))}</div>
-                {(() => { const f = fileSaleInfo(job, settings); const t = zase ? 0 : job.mode === 'prijatelj' ? 1 - job.friendDiscountPct / 100 : 1; return <p className="text-xs text-slate-600 dark:text-slate-300">
-                  STL = sken {num(job.scanH)} h × {num(settings.rates.scan)} € + urejanje {num(job.editH)} h × {num(settings.rates.edit)} € = {eur(f.stl)} · STEP = STL + CAD {num(job.cadH)} h × {num(settings.rates.cad)} € + zahtevni CAD {num(job.reverseH)} h × {num(settings.rates.reverse)} € = {eur(f.step)}<br />
-                  {job.fileSale.context === 'zDelom' ? `Storitve so že v tem projektu – datoteka brez dvojnega obračuna (predaja ${eur(settings.rates.fileHandoverFee)}).` : job.fileSale.context === 'ponovna' ? `Ponovna prodaja: ${num(settings.rates.repeatSalePct)} % od ${eur(f.original)}; ure se ne obračunajo kot storitve.` : 'Samostojno: ure skena/CAD so v ceni datoteke, ne še enkrat kot storitve.'}
-                  {' '}Predlog: <b>{eur(f.suggested * t)}</b>{job.mode === 'prijatelj' && ' (s prijateljskim popustom)'}{zase && ' (Zase: 0)'}</p> })()}
-                <Check label="Ročno prepiši ceno datoteke" checked={job.fileSale.override !== null} onChange={(on) => onChange({ ...job, fileSale: { ...job.fileSale, override: on ? Math.round(fileSaleInfo(job, settings).suggested * 100) / 100 : null } })} />
-                {job.fileSale.override !== null && <NumField label="Cena datoteke (pred popustom stopnje)" value={job.fileSale.override} onChange={(v) => onChange({ ...job, fileSale: { ...job.fileSale, override: v } })} suffix="€" />}
-              </>}
+              <div className="font-semibold text-sm">Datoteka zraven tiska</div>
+              <div className="flex gap-2">{([['none', 'Brez'], ['stl', `STL (${eur(settings.rates.fileAddonStl)})`], ['step', `STEP (${eur(settings.rates.fileAddonStep)})`]] as const).map(([v, l]) => (
+                <button key={v} onClick={() => onChange({ ...job, fileSale: { kind: v } })} className={`flex-1 rounded-xl px-2 py-1.5 text-sm font-semibold ${job.fileSale.kind === v ? 'bg-sky-600 text-white' : 'bg-white dark:bg-slate-800'}`}>{l}</button>))}</div>
+              {job.fileSale.kind !== 'none' && <p className="text-xs text-slate-600 dark:text-slate-300">Fiksno doplačilo k naročilu tiska (storitve se obračunajo normalno): <b>{eur(fileSaleInfo(job, settings).price * (zase ? 0 : job.mode === 'prijatelj' ? 1 - job.friendDiscountPct / 100 : 1))}</b>{job.mode === 'prijatelj' && ' (s prijateljskim popustom)'}{zase && ' (Zase: 0)'}</p>}
             </div>
             {(Object.keys(digitalLabels) as DigitalKind[]).map((k) => {
               const d = job.digital[k]

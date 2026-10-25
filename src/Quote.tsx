@@ -17,10 +17,9 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
   ]
   const disc = job.mode === 'prijatelj' ? 1 - job.friendDiscountPct / 100 : 1
   const fs = fileSaleInfo(job, settings)
-  const skip: Record<string, boolean> = { '3D-skeniranje': fs.excludes.scan, 'Urejanje skena': fs.excludes.edit, 'CAD-modeliranje': fs.excludes.cad, 'Reverse engineering': fs.excludes.reverse }
-  for (const [l, h, rate] of sv) if (h > 0 && !skip[l]) lines.push([l, `${num(h)} h × ${eur(rate * disc)}`, h * rate * disc])
+  for (const [l, h, rate] of sv) if (h > 0) lines.push([l, `${num(h)} h × ${eur(rate * disc)}`, h * rate * disc])
   for (const [k, d] of Object.entries(job.digital)) if (d.on) lines.push([digitalLabels[k as keyof typeof digitalLabels], `${num(d.hours)} h`, (d.hours * d.rate + d.extra) * disc])
-  if (job.fileSale?.kind && job.fileSale.kind !== 'none' && job.mode !== 'zase') lines.push([job.fileSale.kind === 'stl' ? 'Datoteka STL (urejen sken)' : 'Datoteka STEP (parametrični CAD)', job.fileSale.context === 'ponovna' ? 'ponovna prodaja' : job.fileSale.context === 'zDelom' ? 'ob naročilu' : '', fs.price * disc])
+  if (job.fileSale?.kind && job.fileSale.kind !== 'none' && job.mode !== 'zase') lines.push([job.fileSale.kind === 'stl' ? 'Datoteka STL (urejen sken)' : 'Datoteka STEP (parametrični CAD)', 'zraven tiska', fs.price * disc])
   if (r.transport > 0) lines.push(['Prevoz', `${num(job.km)} km`, r.transport])
   if (r.packaging > 0) lines.push(['Pakiranje', '', r.packaging])
   if (r.delivery > 0) lines.push(['Dostava', '', r.delivery])
