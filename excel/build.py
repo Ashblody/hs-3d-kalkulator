@@ -42,18 +42,28 @@ for r in range(8,16):
 tp['A17']='Moči so ocene, dokler jih ne izmeriš. Prazne vrstice 8–15 so za nove tiskalnike.'; tp['A17'].font=Font(italic=True,color='64748B')
 
 # ---------- Materiali ----------
+MATEND=45
 mt=wb.create_sheet('Materiali')
 header(mt,'Materiali',{'A':24,'B':16,'C':10,'D':12,'E':13,'F':13,'G':12,'H':12,'I':14})
-thead(mt,3,['Naziv','Proizvajalec','Vrsta','Neto masa (g)','Redna cena koluta','Akcijska cena','Uporabi','€/kg','Temp. sušenja'])
+thead(mt,3,['Naziv','Proizvajalec','Vrsta','Neto masa (g)','Redna cena koluta','Akcijska / bulk cena','Uporabi','€/kg','Temp. sušenja','Akcija / bulk','Vir cene'])
 mats=[('Bambu PLA Basic','Bambu Lab','PLA',13),('Bambu PETG HF','Bambu Lab','PETG',13),('Bambu ASA','Bambu Lab','ASA',26.64),
 ('Prusament PLA','Prusa','PLA',32),('Prusament PETG','Prusa','PETG',32),('Prusament ASA','Prusa','ASA',32),
 ('Plastika Trček PLA','Plastika Trček','PLA',21),('Plastika Trček PETG','Plastika Trček','PETG',22),
 ('Prusament PC Blend','Prusa','PC',46.39),('Plastika Trček TPU','Plastika Trček','TPU',38.57),('Prusament PETG-CF','Prusa','PETG-CF',60)]
+import re as _re
+_seed=open(__file__.rsplit('/',2)[0]+'/src/seed.ts',encoding='utf8').read()
+_base={'BB':'https://eu.store.bambulab.com/products/','PR':'https://www.prusa3d.com/de/kategorie/','TR':'https://3dtrcek.com/sl/'}
+mats=[(m[0],m[1],m[2],m[3],1000) for m in mats]
+mats2=[]
+for g in _re.findall(r"x\('[^']+', '([^']+)', '([^']+)', '([^']+)', (\d+), ([\d.]+), (null|\['([^']+)', ([\d.]+)\]), (BB|PR|TR) \+ '([^']+)'(?:, '([^']+)')?\)",_seed):
+    mats2.append(dict(n=g[0],mk=g[1],t=g[2],g=int(g[3]),p=float(g[4]),sl=g[6],sp=float(g[7]) if g[7] else None,src=_base[g[8]]+g[9],dry=g[10] or None))
+assert len(mats2)==22, len(mats2)
 dvU=DataValidation(type='list',formula1='"Redna,Akcijska"',allow_blank=False); mt.add_data_validation(dvU)
-for r in range(4,30):
-    m=mats[r-4] if r-4<len(mats) else None
-    vals=[m[0],m[1],m[2],1000,m[3],None,'Redna',None,None] if m else [None]*9
-    for col in (1,2,3,4,5,6,7,9):
+rows=[[m[0],m[1],m[2],m[4],m[3],None,'Redna',None,None,None,None] for m in mats]+[[d['n'],d['mk'],d['t'],d['g'],d['p'],d['sp'],'Redna',None,d['dry'],d['sl'] or None,d['src']] for d in mats2]
+mt.column_dimensions['J'].width=14; mt.column_dimensions['K'].width=48
+for r in range(4,MATEND+1):
+    vals=rows[r-4] if r-4<len(rows) else [None]*11
+    for col in (1,2,3,4,5,6,7,9,10,11):
         c=mt.cell(r,col,vals[col-1]); inp(c,EUR if col in (5,6) else ('#,##0' if col==4 else None))
     dvU.add(f'G{r}')
     mt.cell(r,8,f'=IF(OR(A{r}="",D{r}<=0),"",IF(AND(G{r}="Akcijska",ISNUMBER(F{r})),F{r},E{r})/(D{r}/1000))').number_format=EUR
@@ -133,7 +143,7 @@ k['C6']=date(2026,10,25); k['C6'].number_format='DD.MM.YYYY'
 def dv(formula,cells):
     d=DataValidation(type='list',formula1=formula,allow_blank=False); k.add_data_validation(d); d.add(cells)
 dv('"Stranka,Prijatelj,Zase"','C7'); dv('"Samo tisk,Skeniranje,CAD,Kombinirano,Digitalna datoteka"','C8')
-dv('=Tiskalniki!$A$4:$A$15','C10'); dv('=Materiali!$A$4:$A$29','C11'); dv('"DA,NE"','C16')
+dv('=Tiskalniki!$A$4:$A$15','C10'); dv('=Materiali!$A$4:$A$45','C11'); dv('"DA,NE"','C16')
 nn=DataValidation(type='decimal',operator='greaterThanOrEqual',formula1='0',showErrorMessage=True,error='Vnesi število 0 ali več.'); k.add_data_validation(nn)
 for r in [13,14,15,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,36,37,38,39,40]: nn.add(f'C{r}')
 pc=DataValidation(type='whole',operator='greaterThanOrEqual',formula1='1',showErrorMessage=True,error='Vsaj 1 kos.'); k.add_data_validation(pc); pc.add('C12')
@@ -240,4 +250,4 @@ pj['A62']='Vnesi vrednosti iz Kalkulatorja (Kopiraj → Prilepi kot vrednosti), 
 pj.freeze_panes='A4'
 
 for ws in wb.worksheets: ws.sheet_properties.tabColor={'Kalkulator':'F97316'}.get(ws.title,'0F172A')
-wb.save('/workspace/hs-3d-kalkulator/HS_3D_Kalkulator.xlsx')
+wb.save('/workspace/hs-3d-kalkulator/excel/HS_3D_Kalkulator_v2.xlsx')
