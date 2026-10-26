@@ -122,7 +122,9 @@ export interface JobInput {
 
 export interface Settings { printers: Printer[]; materials: Material[]; materialSeeds?: string[]; ratesVersion?: number; rates: Rates; business: Business }
 
-export interface Customer { id: string; name: string; phone?: string; email?: string; note?: string; createdAt: string; updatedAt?: string }
+export interface Customer { id: string; name: string; phone?: string; email?: string; note?: string; createdAt: string; updatedAt?: string; pricing?: CustomerPricing }
+/** ročno popravljen cenik stranke – ima prednost pred zadnjim projektom */
+export interface CustomerPricing { mode?: 'osebno' | 'poslovno'; printHourly?: number; labourHourly?: number; matKg?: number; markupPct?: number; fileSale?: 'none' | 'stl' | 'step' }
 
 export interface Actuals { printHours: number; grams: number; laborHours: number }
 

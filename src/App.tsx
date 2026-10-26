@@ -41,7 +41,8 @@ export default function App() {
   }
   const sync = useDriveSync(st, setSt, flash)
   const project = st.projects.find((p) => p.id === st.currentId)
-  const calcSettings = effSettings(st.current, project ? project.snapshot : st.settings)
+  const calcBase = project ? project.snapshot : st.settings
+  const calcSettings = effSettings(st.current, { ...calcBase, rates: { ...calcBase.rates, roundTo: st.settings.rates.roundTo } })
   const custOf = (j: JobInput) => (st.customers ?? []).find((c) => c.id === j.customerId)
 
   const save = () => {

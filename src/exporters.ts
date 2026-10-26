@@ -73,12 +73,24 @@ export async function buildXlsx(job: JobInput, settings: Settings, id: string, c
     ['Postavka', 'Obseg', 'Znesek €'], ...lines.map(([l, d, v]) => [l, d, r2(v)]), [],
     ...totals.map(([l, v]) => [l, '', r2(v)]), ['ZA PLAČILO', '', r2(r.gross)], ['Na kos', '', r2(r.perPiece)], [], ['Digitalne pravice', rights],
   ]
-  const res = r as unknown as Record<string, unknown>
-  const named: Record<string, string> = { printHours: 'Čas tiska (h)', kg: 'Material (kg)', laborHours: 'Delo (h)', net: 'Neto €', vat: 'DDV €', gross: 'Za plačilo €', perPiece: 'Na kos €', earnings: 'Zaslužek €', invoiceMult: 'Faktor (Poslovno)' }
-  const razclenitev: (string | number)[][] = [['Postavka', 'Vrednost'], ...Object.entries(res).filter(([, v]) => typeof v === 'number').map(([k, v]) => [named[k] ?? k, r2(v as number)])]
+  const ph = r.printHours * settings.rates.printHourly
+  const razclenitev: (string | number)[][] = [['Postavka', 'Znesek €'],
+    ['CENA ZA STRANKO', ''],
+    [`Tisk ${r2(r.printHours)} h × ${settings.rates.printHourly} €/h`, r2(r.printSale - (r.printOverridden ? (job.printCostOverride ?? 0) : r.material + r.consumables + r.otherDirect))],
+    [`Material ${r2(r.kg * 1000)} g`, r2(r.printOverridden ? (job.printCostOverride ?? 0) : r.material)],
+    ['Potrošni material', r2(r.printOverridden ? 0 : r.consumables + r.otherDirect)],
+    [`Moje delo ${r2(r.laborHours)} h × ${settings.rates.labourHourly} €/h`, r2(r.servicesStandard)],
+    ['Datoteka', r2(r.digital)], ['Prevoz, pakiranje, dostava, ostalo', r2(r.transport + r.packaging + r.delivery + r.otherCosts)],
+    ...(r.invoiceMult !== 1 ? [[`Poslovno × ${r.invoiceMult}`, r2(r.invoiceExtra)]] : []), ...(r.discount > 0 ? [['Popust', -r2(r.discount)]] : []),
+    ['Skupaj', r2(r.netBeforeRounding)], [`Zaokroženo navzgor (${settings.rates.roundTo || 'brez'} €)`, r2(r.rounding)], ['Končna cena (brez DDV)', r2(r.net)], ['Za plačilo', r2(r.gross)], [],
+    ['MOJ STROŠEK – SAMO ZAME (ni v ceni)', ''],
+    ['Material', r2(r.material)], ['Elektrika', r2(r.electricity)], ['Obraba tiskalnika', r2(r.wear)], ['Potrošni material', r2(r.consumables + r.otherDirect)], ['Rezerva', r2(r.reserve)],
+    ['Prevoz, pakiranje, dostava, ostalo', r2(r.realCosts - r.printCost)], ['Moj strošek skupaj', r2(r.realCosts)], [],
+    ['Dobiček (končna cena − moj strošek)', r2(r.profit)], ['Delež fiksnih stroškov', r2(r.fixedShare)], ['Ocena davka', r2(r.tax)], ['Predvideni zaslužek', r2(r.earnings)],
+    [`Ur tiska (${r2(ph)} € po urni postavki)`, r2(r.printHours)], ['Ur dela', r2(r.laborHours)]]
   const wb = XLSX.utils.book_new()
   const ws1 = XLSX.utils.aoa_to_sheet(ponudba); ws1['!cols'] = [{ wch: 36 }, { wch: 26 }, { wch: 12 }]
-  const ws2 = XLSX.utils.aoa_to_sheet(razclenitev); ws2['!cols'] = [{ wch: 28 }, { wch: 12 }]
+  const ws2 = XLSX.utils.aoa_to_sheet(razclenitev); ws2['!cols'] = [{ wch: 40 }, { wch: 12 }]
   XLSX.utils.book_append_sheet(wb, ws1, 'Ponudba'); XLSX.utils.book_append_sheet(wb, ws2, 'Razčlenitev')
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
   return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })

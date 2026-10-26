@@ -135,35 +135,44 @@ export default function Calculator({ job, settings, onChange, actions, customerS
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2"><Big label={`Končna cena – ${job.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}`} tone="green" value={eur(r.gross)} sub={settings.business.vatEnabled ? `brez DDV ${eur(r.net)} · DDV ${eur(r.vat)}` : 'DDV ni obračunan (mali davčni zavezanec)'} /></div>
           <Big label="Cena na kos" value={eur(r.perPiece)} />
-          <Big label="Stroški tiskanja" value={eur(r.printCost)} tone="slate" sub={r.printOverridden ? 'ročno določeno' : `${num(r.printHours)} h tiska`} />
+          <Big label="Moj strošek tiska" value={eur(r.printCost)} tone="slate" sub={r.printOverridden ? 'ročno določeno · ni v ceni, samo zame' : 'ni v ceni, samo zame'} />
           <Big label="Vrednost storitev" value={eur(r.services + r.digital)} tone="slate" sub={`${num(r.laborHours)} h dela`} />
           <Big label="Predvideni zaslužek" tone={r.belowTarget ? 'red' : 'green'} value={eur(r.earnings)} sub={r.laborHours > 0 ? `${eur(r.earningsPerHour)}/h dela` : undefined} />
         </div>
         {r.belowTarget && <div className="card !ring-orange-400 text-sm text-orange-700 dark:text-orange-300">Zaslužek {eur(r.earningsPerHour)}/h je pod ciljem {eur(settings.business.targetHourly)}/h. Dvigni postavke.</div>}
-        {r.rounding > 0.004 && <div className="card text-sm text-slate-600 dark:text-slate-300">Zaokroženo navzgor na {num(settings.rates.roundTo)} €: {eur(r.netBeforeRounding)} → {eur(r.net)} (+{eur(r.rounding)})</div>}
         {r.minOrderApplied && <div className="card text-sm text-sky-700 dark:text-sky-300">Upoštevano minimalno naročilo {eur(settings.rates.minOrder)}.</div>}
 
         <div className="card">
           <div className="h2">Razčlenitev</div>
-          <div className="text-xs font-semibold text-slate-400 mt-1">1. Stroški tiskanja</div>
-          <Row l={`Material (${num(r.kg * 1000)} g)`} v={eur(r.material)} />
-          <Row l="Elektrika" v={eur(r.electricity)} />
-          <Row l="Amortizacija tiskalnika" v={eur(r.wear)} />
-          <Row l="Potrošni + ostali neposredni" v={eur(r.consumables + r.otherDirect)} />
-          <Row l={`Rezerva ${num(job.reservePct)} %`} v={eur(r.reserve)} />
-          <Row l="Stroški tiskanja" v={eur(r.printCost)} strong />
-          {<Row l={`Tisk: ${num(r.printHours)} h × ${num(settings.rates.printHourly)} €/h + material`} v={eur(r.printSale)} />}
-          <div className="text-xs font-semibold text-slate-400 mt-3">2. Prodajna vrednost dela</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mt-1">Cena za stranko</div>
+          <Row l={`Tisk ${num(r.printHours)} h × ${num(settings.rates.printHourly)} €/h`} v={eur(r.printOverridden ? r.printSale - (job.printCostOverride ?? 0) : r.printHours * settings.rates.printHourly)} />
+          {r.printOverridden ? <Row l="Material (ročno)" v={eur(job.printCostOverride ?? 0)} /> : <>
+          <Row l={`Material ${num(r.kg * 1000)} g`} v={eur(r.material)} />
+          {r.consumables + r.otherDirect > 0 && <Row l="Potrošni material" v={eur(r.consumables + r.otherDirect)} />}</>}
           <Row l={`Moje delo ${num(r.laborHours)} h × ${num(settings.rates.labourHourly)} €/h`} v={eur(r.servicesStandard)} />
- {r.digital > 0 && <Row l={`Datoteka ${job.fileSale.kind.toUpperCase()}`} v={eur(r.digital)} />}
-          <Row l="Prevoz, pakiranje, dostava, ostalo" v={eur(r.transport + r.packaging + r.delivery + r.otherCosts)} />
+          {r.digital > 0 && <Row l={`Datoteka ${job.fileSale.kind.toUpperCase()}`} v={eur(r.digital)} />}
+          {r.transport + r.packaging + r.delivery + r.otherCosts > 0 && <Row l="Prevoz, pakiranje, dostava, ostalo" v={eur(r.transport + r.packaging + r.delivery + r.otherCosts)} />}
           {r.invoiceMult !== 1 && <><Row l="Osebno skupaj" v={eur(r.baseTotal)} /><Row l={`Poslovno × ${num(r.invoiceMult)}`} v={`+${eur(r.invoiceExtra)}`} /></>}
           {r.discount > 0 && <Row l="Popust" v={`−${eur(r.discount)}`} />}
-          <Row l="Prihodek (brez DDV)" v={eur(r.net)} strong />
-          <div className="text-xs font-semibold text-slate-400 mt-3">3. Moj strošek in dobiček</div>
-          <Row l="Moj strošek (material, elektrika, obraba, rezerva, prevoz …)" v={eur(r.realCosts)} />
-          <Row l="Dobiček (cena − moj strošek)" v={eur(r.profit)} strong />
-          <div className="text-xs font-semibold text-slate-400 mt-3">4. Od dobička do zaslužka</div>
+          {r.minOrderApplied && <Row l="Minimalno naročilo" v={eur(settings.rates.minOrder)} />}
+          <Row l="Skupaj" v={eur(r.netBeforeRounding)} />
+          {r.rounding > 0.004 && <Row l={`Zaokroženo navzgor na ${num(settings.rates.roundTo)} €`} v={`+${eur(r.rounding)}`} />}
+          <Row l={settings.business.vatEnabled ? 'Končna cena (brez DDV)' : 'Končna cena'} v={eur(r.net)} strong />
+
+          <div className="mt-4 rounded-xl p-3 bg-slate-50 dark:bg-slate-800/40 ring-1 ring-dashed ring-slate-300 dark:ring-slate-600 text-slate-500 dark:text-slate-400" data-testid="moj-strosek">
+          <div className="text-xs font-semibold uppercase tracking-wide">Moj strošek – samo zame (da je pokrito)</div>
+          <div className="text-xs mb-1">Ni prištet k ceni, samo pokaže, koliko te posel stane.</div>
+          {r.printOverridden ? <Row l="Strošek tiska (ročno)" v={eur(r.printCost)} /> : <>
+          <Row l={`Material ${num(r.kg * 1000)} g`} v={eur(r.material)} />
+          <Row l="Elektrika" v={eur(r.electricity)} />
+          <Row l="Obraba tiskalnika" v={eur(r.wear)} />
+          <Row l="Potrošni material" v={eur(r.consumables + r.otherDirect)} />
+          <Row l={`Rezerva ${num(job.reservePct)} %`} v={eur(r.reserve)} /></>}
+          {r.realCosts - r.printCost > 0.004 && <Row l="Prevoz, pakiranje, dostava, ostalo" v={eur(r.realCosts - r.printCost)} />}
+          <Row l="Moj strošek skupaj" v={eur(r.realCosts)} strong />
+          </div>
+          <div className="mt-3 flex justify-between items-baseline"><span className="font-semibold">Dobiček (končna cena − moj strošek)</span><span className="text-lg font-black tabular-nums text-emerald-600 dark:text-emerald-400" data-testid="dobicek">{eur(r.profit)}</span></div>
+          <div className="text-xs font-semibold text-slate-400 mt-3">Od dobička do zaslužka</div>
           <Row l="− delež fiksnih stroškov dejavnosti" v={eur(r.fixedShare)} />
           <Row l={`− ocena davka (${num(settings.business.taxPct)} %)`} v={eur(r.tax)} />
           <Row l="Predvideni osebni zaslužek" v={eur(r.earnings)} strong />

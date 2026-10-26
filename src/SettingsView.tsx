@@ -22,8 +22,8 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
           <NumField label="Prevoz" value={s.rates.km} onChange={setR('km')} suffix="€/km" />
           <NumField label="Minimalno naročilo" value={s.rates.minOrder} onChange={setR('minOrder')} suffix="€" />
           <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
-          <label className="block"><span className="lbl">Zaokroževanje ponudbe (navzgor)</span>
-            <select className="inp" value={s.rates.roundTo} onChange={(e) => setR('roundTo')(Number(e.target.value))}><option value={0}>Izklop</option><option value={1}>Na 1 €</option><option value={5}>Na 5 €</option></select></label>
+          <label className="block"><span className="lbl">Zaokroževanje končne cene navzgor (Hitri in Podroben)</span>
+            <select className="inp" value={s.rates.roundTo} onChange={(e) => setR('roundTo')(Number(e.target.value))}><option value={0}>Brez</option><option value={1}>1 €</option><option value={5}>5 €</option></select></label>
           <NumField label="Doplačilo: STL zraven tiska" value={s.rates.fileAddonStl} onChange={setR('fileAddonStl')} suffix="€" />
           <NumField label="Doplačilo: STEP zraven tiska" value={s.rates.fileAddonStep} onChange={setR('fileAddonStep')} suffix="€" />
         </div>

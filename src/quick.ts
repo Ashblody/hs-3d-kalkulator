@@ -2,34 +2,37 @@ import type { JobInput, Settings } from './types'
 import { allTiers, calculate, effSettings, r2 } from './calc'
 import { emptyJob } from './seed'
 
-export interface QuickInput { printH: number; grams: number; workH: number; matKg: number; printRate: number; workRate: number; markupPct: number; business: boolean }
+export interface QuickInput { printH: number; grams: number; workH: number; matKg: number; printRate: number; workRate: number; markupPct: number; business: boolean; roundTo?: number }
 export const quickDefaults: QuickInput = { printH: 0, grams: 0, workH: 0, matKg: 20, printRate: 3.5, workRate: 20, markupPct: 0, business: false }
 const nz = (x: number) => (Number.isFinite(x) && x > 0 ? x : 0)
 const e2 = (x: number) => x.toLocaleString('sl-SI', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 const n = (x: number) => x.toLocaleString('sl-SI', { maximumFractionDigits: 2 })
 
-/** Andrejev preprost sistem: brez zaokroževanja */
+/** Andrejev preprost sistem; zaokroževanje navzgor po globalni nastavitvi (roundTo, 0 = brez) */
+export const roundUp = (x: number, step = 0) => (step > 0 && x > 0 ? Math.ceil(Math.round(x * 100) / 100 / step) * step : r2(x))
 export function quickCalc(q: QuickInput) {
   const print = nz(q.printH) * nz(q.printRate)
   const material = (nz(q.grams) / 1000) * nz(q.matKg)
   const work = nz(q.workH) * nz(q.workRate)
   const base = print + material + work
   const markup = base * Math.min(100, nz(q.markupPct)) / 100
-  const total = r2(base + markup)
-  return { print: r2(print), material: r2(material), work: r2(work), markup: r2(markup), total, business: r2(total * 2) }
+  const exact = r2(base + markup)
+  const step = nz(q.roundTo ?? 0)
+  const total = roundUp(exact, step)
+  return { print: r2(print), material: r2(material), work: r2(work), markup: r2(markup), exact, rounding: r2(total - exact), total, business: roundUp(exact * 2, step) }
 }
 
 export const quickText = (q: QuickInput) => {
   const r = quickCalc(q)
   return [`Tiskanje: ${n(q.printH)} h × ${e2(q.printRate)}/h = ${e2(r.print)}`, `Material: ${n(q.grams)} g = ${e2(r.material)}`, `Delo: ${n(q.workH)} h × ${e2(q.workRate)}/h = ${e2(r.work)}`,
-    ...(r.markup > 0 ? [`Pribitek ${n(q.markupPct)} %: ${e2(r.markup)}`] : []), `Končna cena: ${e2(r.total)}`, ...(q.business ? [`Z računom: ${e2(r.business)}`] : [])].join('\n')
+    ...(r.markup > 0 ? [`Pribitek ${n(q.markupPct)} %: ${e2(r.markup)}`] : []), ...(r.rounding > 0 ? [`Zaokroženo: +${e2(r.rounding)}`] : []), `Končna cena: ${e2(r.total)}`, ...(q.business ? [`Z računom: ${e2(r.business)}`] : [])].join('\n')
 }
 
 /** Kaj bi dal podrobni kalkulator (Na roke, privzeti tiskalnik + Bambu PLA Basic) */
 export function quickCompare(q: QuickInput, s: Settings) {
   const j: JobInput = { ...emptyJob(s.rates), materialId: s.materials.some((m) => m.id === 'bb2-pla') ? 'bb2-pla' : emptyJob().materialId, pieces: 1, gramsPerPiece: nz(q.grams), useBatchTime: true, batchHours: Math.floor(nz(q.printH)), batchMinutes: Math.round((nz(q.printH) % 1) * 60) % 60, scanH: nz(q.workH), mode: 'osebno' }
   const d = allTiers(j, s).osebno.net
-  return { detailed: d, diff: r2(d - quickCalc(q).total) }
+  return { detailed: d, diff: r2(d - quickCalc({ ...q, roundTo: s.rates.roundTo }).total) }
 }
 
 /** kratek povzetek za stranko iz podrobnega kalkulatorja */
@@ -56,8 +59,9 @@ export function quickToProject(q: QuickInput, name: string, s: Settings, custome
     materialId: s.materials.some((m) => m.id === 'bb2-pla') ? 'bb2-pla' : emptyJob().materialId,
     pieces: 1, gramsPerPiece: nz(q.grams), useBatchTime: true, batchHours: Math.floor(h), batchMinutes: Math.round((h % 1) * 60) % 60,
     quickMarkupPct: nz(q.markupPct), quickMatKg: nz(q.matKg), reservePct: 0, printCostOverride: r.material, extraWorkH: nz(q.workH), extraWorkRate: nz(q.workRate), otherCosts: r.markup,
+    // zaokroževanje naredi projekt sam (globalna nastavitev)
   }
-  const snapshot: Settings = structuredClone({ ...s, rates: { ...s.rates, printHourly: nz(q.printRate), labourHourly: nz(q.workRate), roundTo: 0, minOrder: 0, invoiceMultiplier: 2 } })
+  const snapshot: Settings = structuredClone({ ...s, rates: { ...s.rates, printHourly: nz(q.printRate), labourHourly: nz(q.workRate), roundTo: nz(q.roundTo ?? 0), minOrder: 0, invoiceMultiplier: 2 } })
   // ure, ki niso cele minute, ohranimo natančno prek ur na kos
   if (Math.abs(input.batchHours + input.batchMinutes / 60 - h) > 1e-9) Object.assign(input, { useBatchTime: false, hoursPerPiece: h, minutesPerPiece: 0 })
   return { input, snapshot }

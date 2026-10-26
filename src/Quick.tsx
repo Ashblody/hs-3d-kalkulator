@@ -15,7 +15,8 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
   const [name, setName] = useState('')
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(q)) }, [q])
   const set = (k: keyof QuickInput) => (v: number | boolean) => setQ({ ...q, [k]: v })
-  const r = quickCalc(q); const c = quickCompare(q, settings)
+  const qq: QuickInput = { ...q, roundTo: settings.rates.roundTo }
+  const r = quickCalc(qq); const c = quickCompare(q, settings)
   return (
     <div className="grid lg:grid-cols-2 gap-4">
       <div className="card grid grid-cols-2 gap-3 self-start">
@@ -33,12 +34,13 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
       <div className="space-y-4 self-start">
         <div className="card">
           <Row l="Tiskanje" v={eur(r.print)} /><Row l="Material" v={eur(r.material)} /><Row l="Delo" v={eur(r.work)} /><Row l="Pribitek" v={eur(r.markup)} />
+          {r.rounding > 0 && <Row l={`Zaokroženo navzgor na ${settings.rates.roundTo} € (${eur(r.exact)})`} v={`+${eur(r.rounding)}`} />}
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-bold">KONČNA CENA</span><span className="text-3xl font-black tabular-nums" data-testid="quick-total">{eur(r.total)}</span></div>
           {q.business && <div className="flex justify-between items-baseline"><span className="font-semibold">Poslovne stranke (2×)</span><span className="text-2xl font-black tabular-nums text-emerald-600" data-testid="quick-business">{eur(r.business)}</span></div>}
-          <button className="btn-p w-full mt-3" onClick={async () => flash((await copyText(quickText(q))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
+          <button className="btn-p w-full mt-3" onClick={async () => flash((await copyText(quickText(qq))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
           <div className="flex gap-2 mt-2">
             <input className="inp" placeholder="Ime projekta" value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn whitespace-nowrap" onClick={() => { onSave(quickToProject(q, name, settings, cust)); setName('') }}>Shrani kot projekt</button>
+            <button className="btn whitespace-nowrap" onClick={() => { onSave(quickToProject(qq, name, settings, cust)); setName('') }}>Shrani kot projekt</button>
           </div>
         </div>
         <div className="card text-sm text-slate-600 dark:text-slate-300">Podrobni kalkulator (Na roke, PLA, z elektriko in obrabo, zaokroženo): <b>{eur(c.detailed)}</b> · razlika {c.diff >= 0 ? '+' : ''}{eur(c.diff)}</div>

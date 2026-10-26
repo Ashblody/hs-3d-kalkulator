@@ -25,7 +25,8 @@ describe('stranke', () => {
     const pp = newProject({ ...blankJob(), customerId: c.id, mode: 'poslovno', reservePct: 25, fileSale: { kind: 'step' }, rateOverride: { printHourly: 5, labourHourly: 30, roundTo: 5 } }, st.settings)
     const j = applyCustomer(blankJob(), c, [pp], st.settings)
     expect(j).toMatchObject({ customerId: c.id, client: 'Robert', mode: 'poslovno', reservePct: 25, fileSale: { kind: 'step' } })
-    expect(j.rateOverride).toMatchObject({ printHourly: 5, labourHourly: 30, roundTo: 5 })
+    expect(j.rateOverride).toMatchObject({ printHourly: 5, labourHourly: 30 })
+    expect(j.rateOverride).not.toHaveProperty("roundTo")
     const a = calculate({ ...j, scanH: 1 }, st.settings), b = calculate({ ...j, scanH: 0 }, st.settings)
     expect(a.netBeforeRounding - b.netBeforeRounding).toBeCloseTo(60, 1) // 30 €/h × 2 (poslovno)
   })
@@ -39,5 +40,28 @@ describe('stranke', () => {
     const m = mergeStates(a, b).state
     expect(m.customers.map((x) => x.name).sort()).toEqual(['Matej', 'Robert'])
     expect(normalize(JSON.parse(JSON.stringify(m))).customers.length).toBe(2)
+  })
+})
+
+describe('Uredi stranko – shranjen cenik', () => {
+  const st = initialState()
+  it('ročni cenik ima prednost in se predizpolni (Hitri + Podroben)', () => {
+    const c = newCustomer('Miha', { pricing: { mode: 'poslovno', printHourly: 4, labourHourly: 25, matKg: 35, markupPct: 15, fileSale: 'stl' } })
+    expect(applyCustomerQuick(quickDefaults, c, [])).toMatchObject({ printRate: 4, workRate: 25, matKg: 35, markupPct: 15, business: true })
+    const j = applyCustomer(blankJob(), c, [], st.settings)
+    expect(j).toMatchObject({ mode: 'poslovno', fileSale: { kind: 'stl' }, rateOverride: { printHourly: 4, labourHourly: 25 } })
+    const a = calculate({ ...j, scanH: 1 }, st.settings), b = calculate(j, st.settings)
+    expect(a.netBeforeRounding - b.netBeforeRounding).toBeCloseTo(50, 2)
+  })
+  it('ročni popravek povozi zadnji projekt, ostalo ostane', () => {
+    const c0 = newCustomer('Ana')
+    const sv = quickToProject({ ...quickDefaults, printH: 2, grams: 50, workH: 1, printRate: 5, workRate: 30, matKg: 25 }, 'x', st.settings, c0)
+    const p = newProject(sv.input, sv.snapshot)
+    const c = { ...c0, pricing: { labourHourly: 22 } }
+    expect(applyCustomerQuick(quickDefaults, c, [p])).toMatchObject({ printRate: 5, workRate: 22, matKg: 25 })
+  })
+  it('cenik stranke preživi normalize (kopija/sinhronizacija)', () => {
+    const c = newCustomer('Zala', { pricing: { printHourly: 4 } })
+    expect(normalize({ ...initialState(), customers: [c] }).customers[0].pricing).toEqual({ printHourly: 4 })
   })
 })
