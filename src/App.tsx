@@ -11,9 +11,12 @@ import { copyText, jobText } from './quick'
 import { exportJson, importJson, mergeStates } from './backup'
 import { buildPdf, buildXlsx, pdfName, saveFile, xlsxName } from './exporters'
 import InstallHint from './InstallHint'
+import CustomersView, { CustomerPicker } from './CustomersView'
+import { applyCustomer } from './customers'
+import { effSettings } from './calc'
 
-type Tab = 'kalk' | 'hitri' | 'projekti' | 'posel' | 'nastavitve'
-const tabs: [Tab, string][] = [['hitri', 'Hitri'], ['kalk', 'Podroben'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
+type Tab = 'kalk' | 'hitri' | 'projekti' | 'stranke' | 'posel' | 'nastavitve'
+const tabs: [Tab, string][] = [['hitri', 'Hitri'], ['kalk', 'Podroben'], ['projekti', 'Projekti'], ['stranke', 'Stranke'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
 
 export default function App() {
   const [st, setSt] = usePersistentState()
@@ -30,13 +33,14 @@ export default function App() {
   const doExport = async (job: JobInput, settings: Settings, id: string, kind: 'pdf' | 'xlsx') => {
     try {
       flash(kind === 'pdf' ? 'Pripravljam PDF …' : 'Pripravljam Excel …')
-      const blob = kind === 'pdf' ? await buildPdf(job, settings, id) : await buildXlsx(job, settings, id)
+      const blob = kind === 'pdf' ? await buildPdf(job, settings, id, custOf(job)) : await buildXlsx(job, settings, id, custOf(job))
       const res = await saveFile(blob, kind === 'pdf' ? pdfName(job) : xlsxName(job))
       if (res !== 'cancelled') flash(res === 'shared' ? 'Deljeno' : 'Datoteka prenesena')
     } catch (e) { console.error(e); alert('Izvoz ni uspel.') }
   }
   const project = st.projects.find((p) => p.id === st.currentId)
-  const calcSettings = project ? project.snapshot : st.settings
+  const calcSettings = effSettings(st.current, project ? project.snapshot : st.settings)
+  const custOf = (j: JobInput) => (st.customers ?? []).find((c) => c.id === j.customerId)
 
   const save = () => {
     if (project) {
@@ -82,16 +86,20 @@ export default function App() {
         {msg && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg z-20">{msg}</div>}
         {tab === 'kalk' && (<>
           {project && <div className="text-xs text-slate-500 mb-2">Projekt uporablja cenik, shranjen {new Date(project.createdAt).toLocaleDateString('sl-SI')}. Spremembe splošnega cenika nanj ne vplivajo.</div>}
-          <Calculator job={st.current} settings={calcSettings} onChange={(current) => setSt({ ...st, current })} actions={actions} />
+          <Calculator job={st.current} settings={calcSettings} onChange={(current) => setSt({ ...st, current })} actions={actions}
+            customerSlot={<CustomerPicker customers={st.customers} value={st.current.customerId}
+              onCreate={(c) => setSt((s) => ({ ...s, customers: [...s.customers, c] }))}
+              onPick={(c) => setSt((s) => ({ ...s, current: applyCustomer(s.current, c, s.projects, project ? project.snapshot : s.settings) }))} />} />
         </>)}
         {tab === 'projekti' && <ProjectsView projects={st.projects} currentId={st.currentId} onOpen={open} onCopy={copy}
           onDelete={(p) => setSt({ ...st, projects: st.projects.filter((x) => x.id !== p.id), currentId: st.currentId === p.id ? null : st.currentId })}
           onPdf={(p) => printQuote(p.input, p.snapshot, p.id)} onExport={(p, k) => doExport(p.input, p.snapshot, p.id, k)}
           onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual } : x)) })}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />}
-        {tab === 'hitri' && <Quick settings={st.settings} flash={flash} onSave={({ input, snapshot }) => {
+        {tab === 'stranke' && <CustomersView customers={st.customers} projects={st.projects} onOpen={open} onChange={(customers) => setSt({ ...st, customers })} />}
+        {tab === 'hitri' && <Quick settings={st.settings} flash={flash} customers={st.customers} projects={st.projects} onCreateCustomer={(c) => setSt((s) => ({ ...s, customers: [...s.customers, c] }))} onSave={({ input, snapshot }) => {
           const p = { ...newProject(input, snapshot) }
-          setSt({ ...st, projects: [...st.projects, p] }); flash(`Shranjeno v Projekti: ${input.name}`)
+          setSt((s) => ({ ...s, projects: [...s.projects, p] })); flash(`Shranjeno v Projekti: ${input.name}`)
         }} />}
         {tab === 'posel' && <Dashboard projects={st.projects} settings={st.settings} />}
         {tab === 'nastavitve' && (<>

@@ -110,10 +110,19 @@ export interface JobInput {
   digital: Record<DigitalKind, DigitalItem>
   /** datoteka zraven tiska (fiksno doplačilo) */
   fileSale: FileSale
+  /** stranka iz seznama Stranke */
+  customerId?: string
+  /** pribitek iz Hitrega izračuna (za ponovno izbiro stranke) */
+  quickMarkupPct?: number
+  quickMatKg?: number
+  /** cenik za to stranko (prevzet iz zadnjega projekta) */
+  rateOverride?: Partial<Pick<Rates, 'printHourly' | 'labourHourly' | 'roundTo' | 'fileAddonStl' | 'fileAddonStep'>>
   rights: { physicalOnly: boolean; personalUse: boolean; commercial: boolean; sourceCad: boolean }
 }
 
 export interface Settings { printers: Printer[]; materials: Material[]; materialSeeds?: string[]; ratesVersion?: number; rates: Rates; business: Business }
+
+export interface Customer { id: string; name: string; phone?: string; email?: string; note?: string; createdAt: string }
 
 export interface Actuals { printHours: number; grams: number; laborHours: number }
 

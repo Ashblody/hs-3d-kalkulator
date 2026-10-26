@@ -21,7 +21,7 @@ export function mergeStates(local: AppState, inc: AppState): { state: AppState; 
   }
   const mergeList = <T extends { id: string }>(a: T[], b: T[]) => [...a, ...b.filter((x) => !a.some((y) => y.id === x.id))]
   return {
-    state: { ...local, projects: [...byId.values()], settings: { ...local.settings, materials: mergeList(local.settings.materials, inc.settings.materials), printers: mergeList(local.settings.printers, inc.settings.printers) } },
+    state: { ...local, projects: [...byId.values()], customers: mergeList(local.customers ?? [], inc.customers ?? []), settings: { ...local.settings, materials: mergeList(local.settings.materials, inc.settings.materials), printers: mergeList(local.settings.printers, inc.settings.printers) } },
     added, updated,
   }
 }

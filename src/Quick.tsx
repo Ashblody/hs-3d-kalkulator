@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { JobInput, Settings } from './types'
+import type { Customer, JobInput, Project, Settings } from './types'
+import { CustomerPicker } from './CustomersView'
+import { applyCustomerQuick } from './customers'
 import { copyText, quickToProject, quickCalc, quickCompare, quickDefaults, quickText, type QuickInput } from './quick'
 import { eur } from './format'
 import { Check, NumField, Row } from './ui'
@@ -7,7 +9,8 @@ import { Check, NumField, Row } from './ui'
 const KEY = 'hs3d-hitri'
 const load = (): QuickInput => { try { return { ...quickDefaults, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } } catch { return quickDefaults } }
 
-export default function Quick({ settings, flash, onSave }: { settings: Settings; flash: (m: string) => void; onSave: (p: { input: JobInput; snapshot: Settings }) => void }) {
+export default function Quick({ settings, flash, onSave, customers, projects, onCreateCustomer }: { settings: Settings; flash: (m: string) => void; onSave: (p: { input: JobInput; snapshot: Settings }) => void; customers: Customer[]; projects: Project[]; onCreateCustomer: (c: Customer) => void }) {
+  const [cust, setCust] = useState<Customer | undefined>()
   const [q, setQ] = useState<QuickInput>(load)
   const [name, setName] = useState('')
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(q)) }, [q])
@@ -16,6 +19,7 @@ export default function Quick({ settings, flash, onSave }: { settings: Settings;
   return (
     <div className="grid lg:grid-cols-2 gap-4">
       <div className="card grid grid-cols-2 gap-3 self-start">
+        <div className="col-span-2"><CustomerPicker customers={customers} value={cust?.id} onCreate={onCreateCustomer} onPick={(c) => { setCust(c); setQ(applyCustomerQuick(q, c, projects)) }} /></div>
         <NumField label="Ure tiskanja" value={q.printH} onChange={set('printH')} suffix="h" />
         <NumField label="Teža materiala" value={q.grams} onChange={set('grams')} suffix="g" />
         <NumField label="Tvoje ure" value={q.workH} onChange={set('workH')} suffix="h" />
@@ -34,7 +38,7 @@ export default function Quick({ settings, flash, onSave }: { settings: Settings;
           <button className="btn-p w-full mt-3" onClick={async () => flash((await copyText(quickText(q))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
           <div className="flex gap-2 mt-2">
             <input className="inp" placeholder="Ime projekta" value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn whitespace-nowrap" onClick={() => { onSave(quickToProject(q, name, settings)); setName('') }}>Shrani kot projekt</button>
+            <button className="btn whitespace-nowrap" onClick={() => { onSave(quickToProject(q, name, settings, cust)); setName('') }}>Shrani kot projekt</button>
           </div>
         </div>
         <div className="card text-sm text-slate-600 dark:text-slate-300">Podrobni kalkulator (Na roke, PLA, z elektriko in obrabo, zaokroženo): <b>{eur(c.detailed)}</b> · razlika {c.diff >= 0 ? '+' : ''}{eur(c.diff)}</div>

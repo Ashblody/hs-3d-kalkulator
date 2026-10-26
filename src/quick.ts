@@ -1,5 +1,5 @@
 import type { JobInput, Settings } from './types'
-import { allTiers, calculate, r2 } from './calc'
+import { allTiers, calculate, effSettings, r2 } from './calc'
 import { emptyJob } from './seed'
 
 export interface QuickInput { printH: number; grams: number; workH: number; matKg: number; printRate: number; workRate: number; markupPct: number; business: boolean }
@@ -33,7 +33,8 @@ export function quickCompare(q: QuickInput, s: Settings) {
 }
 
 /** kratek povzetek za stranko iz podrobnega kalkulatorja */
-export function jobText(j: JobInput, s: Settings) {
+export function jobText(j: JobInput, s0: Settings) {
+  const s = effSettings(j, s0)
   const r = calculate(j, s); const t = allTiers(j, s)
   const lines = [j.name ? `${j.name}` : '', `Tiskanje: ${n(r.printHours)} h × ${e2(s.rates.printHourly)}/h = ${e2(r.printHours * s.rates.printHourly)}`, `Material: ${n(r.kg * 1000)} g = ${e2(r.material)}`,
     `Delo: ${n(r.laborHours)} h × ${e2(s.rates.labourHourly)}/h = ${e2(r.services)}`]
@@ -46,17 +47,17 @@ export const copyText = (t: string) => navigator.clipboard?.writeText(t).then(()
 
 /** Hitri izračun → projekt (status Ponudba). Cenik projekta = vrednosti iz hitrega izračuna, brez zaokroževanja in min. naročila,
  *  material po vnesenih €/kg (ročni stroški tiska), pribitek kot "ostali stroški". Cena projekta = cena hitrega izračuna. */
-export function quickToProject(q: QuickInput, name: string, s: Settings): { input: JobInput; snapshot: Settings } {
+export function quickToProject(q: QuickInput, name: string, s: Settings, customer?: { id: string; name: string }): { input: JobInput; snapshot: Settings } {
   const r = quickCalc(q)
   const h = nz(q.printH)
   const input: JobInput = {
-    ...emptyJob(s.rates), name: name.trim() || 'Hitri izračun', client: '', description: `Hitri izračun: ${n(h)} h tiska, ${n(q.grams)} g po ${e2(q.matKg)}/kg, ${n(q.workH)} h dela${q.markupPct ? `, pribitek ${n(q.markupPct)} %` : ''}`,
+    ...emptyJob(s.rates), name: name.trim() || 'Hitri izračun', client: customer?.name ?? '', customerId: customer?.id, description: `Hitri izračun: ${n(h)} h tiska, ${n(q.grams)} g po ${e2(q.matKg)}/kg, ${n(q.workH)} h dela${q.markupPct ? `, pribitek ${n(q.markupPct)} %` : ''}`,
     mode: q.business ? 'poslovno' : 'osebno',
     materialId: s.materials.some((m) => m.id === 'bb2-pla') ? 'bb2-pla' : emptyJob().materialId,
     pieces: 1, gramsPerPiece: nz(q.grams), useBatchTime: true, batchHours: Math.floor(h), batchMinutes: Math.round((h % 1) * 60) % 60,
-    reservePct: 0, printCostOverride: r.material, extraWorkH: nz(q.workH), extraWorkRate: nz(q.workRate), otherCosts: r.markup,
+    quickMarkupPct: nz(q.markupPct), quickMatKg: nz(q.matKg), reservePct: 0, printCostOverride: r.material, extraWorkH: nz(q.workH), extraWorkRate: nz(q.workRate), otherCosts: r.markup,
   }
-  const snapshot: Settings = structuredClone({ ...s, rates: { ...s.rates, printHourly: nz(q.printRate), roundTo: 0, minOrder: 0, invoiceMultiplier: 2 } })
+  const snapshot: Settings = structuredClone({ ...s, rates: { ...s.rates, printHourly: nz(q.printRate), labourHourly: nz(q.workRate), roundTo: 0, minOrder: 0, invoiceMultiplier: 2 } })
   // ure, ki niso cele minute, ohranimo natančno prek ur na kos
   if (Math.abs(input.batchHours + input.batchMinutes / 60 - h) > 1e-9) Object.assign(input, { useBatchTime: false, hoursPerPiece: h, minutesPerPiece: 0 })
   return { input, snapshot }

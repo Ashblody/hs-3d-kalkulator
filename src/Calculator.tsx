@@ -8,7 +8,7 @@ import { quickCalc, quickDefaults } from './quick'
 const modes: [Mode, string, string][] = [['osebno', 'Osebno', 'na roke'], ['poslovno', 'Poslovno', 'z računom']]
 const types: [OrderType, string][] = [['tisk', 'Samo tisk'], ['sken', 'Skeniranje'], ['cad', 'CAD'], ['kombinirano', 'Kombinirano'], ['digitalno', 'Digitalna datoteka']]
 
-export default function Calculator({ job, settings, onChange, actions }: { job: JobInput; settings: Settings; onChange: (j: JobInput) => void; actions?: React.ReactNode }) {
+export default function Calculator({ job, settings, onChange, actions, customerSlot }: { job: JobInput; settings: Settings; onChange: (j: JobInput) => void; actions?: React.ReactNode; customerSlot?: React.ReactNode }) {
   const set = <K extends keyof JobInput>(k: K) => (v: JobInput[K]) => onChange({ ...job, [k]: v })
   const r = calculate(job, settings)
   const errors = validateJob(job)
@@ -28,9 +28,11 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <TextField label="Ime projekta" value={job.name} onChange={set('name')} />
+            {customerSlot}
             <TextField label="Stranka" value={job.client} onChange={set('client')} />
             <TextField label="Datum" type="date" value={job.date} onChange={set('date')} />
             <Select label="Vrsta naročila" value={job.orderType} onChange={set('orderType')} options={types} />
+            {job.rateOverride && <div className="col-span-2 sm:col-span-3 text-xs text-sky-600 dark:text-sky-300">Cenik stranke: tisk {num(settings.rates.printHourly)} €/h · delo {num(settings.rates.labourHourly)} €/h <button className="underline ml-1" onClick={() => onChange({ ...job, rateOverride: undefined })}>ponastavi</button></div>}
             <div className="col-span-2"><TextField label="Opis" value={job.description} onChange={set('description')} /></div>
           </div>
         </div>

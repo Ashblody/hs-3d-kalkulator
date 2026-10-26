@@ -1,4 +1,4 @@
-import type { JobInput, Settings } from './types'
+import type { Customer, JobInput, Settings } from './types'
 import { quoteData, quoteNumber, safeName } from './quoteData'
 
 const eurPdf = (x: number) => new Intl.NumberFormat('sl-SI', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(x).replace(/\u00a0|\u202f/g, ' ') + ' €'
@@ -17,7 +17,7 @@ export async function saveFile(blob: Blob, name: string): Promise<'shared' | 'do
   return 'downloaded'
 }
 
-export async function buildPdf(job: JobInput, settings: Settings, id: string): Promise<Blob> {
+export async function buildPdf(job: JobInput, settings: Settings, id: string, customer?: Customer): Promise<Blob> {
   const { jsPDF } = await import('jspdf')
   const base = import.meta.env.BASE_URL
   const [reg, bold] = await Promise.all(['DejaVuSans.ttf', 'DejaVuSans-Bold.ttf'].map((f) => fetch(`${base}fonts/${f}`).then((r) => r.arrayBuffer())))
@@ -35,7 +35,11 @@ export async function buildPdf(job: JobInput, settings: Settings, id: string): P
   doc.setDrawColor(5, 150, 105); doc.setLineWidth(1.2); doc.line(L, 38, R, 38)
   let y = 47
   const label = (t: string) => { doc.setFontSize(8); doc.setTextColor(100, 116, 139); doc.text(t.toUpperCase(), L, y); y += 5; doc.setTextColor(15, 23, 42); doc.setFontSize(11) }
-  label('Naročnik'); doc.setFont('DV', 'bold'); doc.text(job.client || '—', L, y); y += 8
+  label('Naročnik'); doc.setFont('DV', 'bold'); doc.text(customer?.name || job.client || '—', L, y); y += 5
+  doc.setFont('DV', 'normal'); doc.setFontSize(9)
+  const contact = [customer?.phone, customer?.email].filter(Boolean).join(' · ')
+  if (contact) { doc.text(contact, L, y); y += 5 }
+  y += 3
   doc.setFont('DV', 'normal'); label('Projekt'); doc.setFont('DV', 'bold'); doc.text(job.name || '(brez imena)', L, y); y += 5
   doc.setFont('DV', 'normal'); doc.setFontSize(9)
   if (job.description) { const d = doc.splitTextToSize(job.description, R - L); doc.text(d, L, y); y += d.length * 4.5 }
@@ -60,12 +64,12 @@ export async function buildPdf(job: JobInput, settings: Settings, id: string): P
   return doc.output('blob')
 }
 
-export async function buildXlsx(job: JobInput, settings: Settings, id: string): Promise<Blob> {
+export async function buildXlsx(job: JobInput, settings: Settings, id: string, customer?: Customer): Promise<Blob> {
   const XLSX = await import('xlsx')
   const { r, lines, totals, rights, modeLabel } = quoteData(job, settings)
   const r2 = (x: number) => Math.round(x * 100) / 100
   const ponudba: (string | number)[][] = [
-    ['HS 3D – ponudba', quoteNumber(job, id)], ['Datum', job.date], ['Naročnik', job.client || ''], ['Projekt', job.name], ['Opis', job.description || ''], ['Način', modeLabel], [],
+    ['HS 3D – ponudba', quoteNumber(job, id)], ['Datum', job.date], ['Naročnik', customer?.name || job.client || ''], ['Kontakt', [customer?.phone, customer?.email].filter(Boolean).join(' · ')], ['Projekt', job.name], ['Opis', job.description || ''], ['Način', modeLabel], [],
     ['Postavka', 'Obseg', 'Znesek €'], ...lines.map(([l, d, v]) => [l, d, r2(v)]), [],
     ...totals.map(([l, v]) => [l, '', r2(v)]), ['ZA PLAČILO', '', r2(r.gross)], ['Na kos', '', r2(r.perPiece)], [], ['Digitalne pravice', rights],
   ]

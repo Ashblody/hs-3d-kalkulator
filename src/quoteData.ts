@@ -1,10 +1,11 @@
-import type { JobInput, Settings } from './types'
-import { calculate, fileSaleInfo } from './calc'
+import type { Customer, JobInput, Settings } from './types'
+import { calculate, effSettings, fileSaleInfo } from './calc'
 import { eur, num } from './format'
 
 export type QuoteLine = [string, string, number]
 /** Postavke ponudbe – skupno za prikaz, PDF in Excel */
-export function quoteData(job: JobInput, settings: Settings) {
+export function quoteData(job: JobInput, settings0: Settings, customer?: Customer) {
+  const settings = effSettings(job, settings0)
   const r = calculate(job, settings)
   const mat = settings.materials.find((m) => m.id === job.materialId)
   const lines: QuoteLine[] = []
@@ -30,7 +31,7 @@ export function quoteData(job: JobInput, settings: Settings) {
   totals.push(['Skupaj brez DDV', r.net])
   if (settings.business.vatEnabled) totals.push([`DDV ${num(settings.business.vatPct)} %`, r.vat])
   const rights = job.fileSale?.kind === 'stl' ? 'datoteka STL za osebno uporabo naročnika' : job.fileSale?.kind === 'step' ? 'datoteka STEP za osebno uporabo naročnika' : 'samo fizični izdelek, brez digitalnih datotek'
-  return { r, lines, totals, rights, modeLabel: job.mode === 'poslovno' ? 'Poslovno' : 'Osebno' }
+  return { r, lines, totals, rights, customer, modeLabel: job.mode === 'poslovno' ? 'Poslovno' : 'Osebno' }
 }
 export const quoteNumber = (job: JobInput, id: string) => `${job.date.replace(/-/g, '')}-${id.slice(0, 4).toUpperCase()}`
 export const safeName = (s: string) => (s || 'projekt').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_').slice(0, 40)

@@ -45,7 +45,15 @@ export interface Result {
   belowTarget: boolean
 }
 
-export function calculate(j: JobInput, s: Settings): Result {
+/** cenik projekta + cenik stranke (rateOverride) */
+export function effSettings(j: JobInput, s: Settings): Settings {
+  const o = j.rateOverride
+  if (!o || !Object.keys(o).length) return s
+  return { ...s, rates: { ...s.rates, ...Object.fromEntries(Object.entries(o).filter(([, v]) => typeof v === 'number' && Number.isFinite(v))) } }
+}
+
+export function calculate(j: JobInput, s0: Settings): Result {
+  const s = effSettings(j, s0)
   const printer = s.printers.find((p) => p.id === j.printerId)
   const mat = s.materials.find((m) => m.id === j.materialId)
   const printHours = totalPrintHours(j)
