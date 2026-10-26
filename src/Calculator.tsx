@@ -1,5 +1,6 @@
 import type { JobInput, Mode, Settings } from './types'
-import { allTiers, TIERS, calculate, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
+import FloorBox from './FloorBox'
+import { allTiers, TIERS, calculate, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
 import { eur, num } from './format'
 import { Big, Check, NumField, Row, Section, Select, TextField } from './ui'
 import { PriceVsCost, StructurePie } from './Charts'
@@ -168,6 +169,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <Row l="Moj strošek skupaj" v={eur(r.realCosts)} strong />
           </div>
           <div className="mt-3 flex justify-between items-baseline"><span className="font-semibold">Dobiček (končna cena − moj strošek)</span><span className="text-lg font-black tabular-nums text-emerald-600 dark:text-emerald-400" data-testid="dobicek">{eur(r.profit)}</span></div>
+          <FloorBox f={jobFloor(r, settings)} biz={job.mode === 'poslovno'} rate={settings.rates.labourHourly} />
           <div className="text-xs font-semibold text-slate-400 mt-3">Od dobička do zaslužka</div>
           <Row l="− delež fiksnih stroškov dejavnosti" v={eur(r.fixedShare)} />
           <Row l={`− ocena davka (${num(settings.business.taxPct)} %)`} v={eur(r.tax)} />

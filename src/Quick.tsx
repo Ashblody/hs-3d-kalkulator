@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import type { Customer, JobInput, Project, Settings } from './types'
 import { CustomerPicker } from './CustomersView'
 import { applyCustomerQuick } from './customers'
-import { copyText, quickToProject, quickCalc, quickCompare, quickDefaults, quickText, type QuickInput } from './quick'
+import { copyText, quickToProject, quickCalc, quickCompare, quickDefaults, quickFloor, quickText, type QuickInput } from './quick'
 import { eur } from './format'
 import { Check, NumField, Row } from './ui'
+import FloorBox from './FloorBox'
 
 const KEY = 'hs3d-hitri'
 const load = (): QuickInput => { try { return { ...quickDefaults, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } } catch { return quickDefaults } }
@@ -37,6 +38,7 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
           {r.rounding > 0 && <Row l={`Zaokroženo navzgor na ${settings.rates.roundTo} € (${eur(r.exact)})`} v={`+${eur(r.rounding)}`} />}
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-bold">KONČNA CENA</span><span className="text-3xl font-black tabular-nums" data-testid="quick-total">{eur(r.total)}</span></div>
           {q.business && <div className="flex justify-between items-baseline"><span className="font-semibold">Poslovne stranke (2×)</span><span className="text-2xl font-black tabular-nums text-emerald-600" data-testid="quick-business">{eur(r.business)}</span></div>}
+          <FloorBox f={quickFloor(qq, settings)} biz={q.business} rate={q.workRate} />
           <button className="btn-p w-full mt-3" onClick={async () => flash((await copyText(quickText(qq))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
           <div className="flex gap-2 mt-2">
             <input className="inp" placeholder="Ime projekta" value={name} onChange={(e) => setName(e.target.value)} />

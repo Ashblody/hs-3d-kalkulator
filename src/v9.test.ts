@@ -23,3 +23,11 @@ describe('v9: lepilo in združena polja', () => {
     expect(emptyJob().extraMaterialG).toBe(0)
   })
 })
+
+import { jobFloor } from './calc'
+describe('spodnja meja', () => {
+  it('768 g ASA, 18,8 h, 3,5 h', () => {
+    const s = defaultSettings()
+    expect(jobFloor(calculate(demoJob(), s), s)).toEqual({ own: 35.49, floor: 106, floorBiz: 211, safe: 132, safeBiz: 263 })
+  })
+})

@@ -163,3 +163,15 @@ export const TIERS = [
 export function allTiers(j: JobInput, s: Settings) {
   return { osebno: calculate({ ...j, mode: 'osebno' }, s), poslovno: calculate({ ...j, mode: 'poslovno' }, s) }
 }
+
+export const SAFE_PRINT_RATE = 2
+export interface Floor { own: number; floor: number; floorBiz: number; safe: number; safeBiz: number }
+const ceilStep = (x: number, step: number) => (step > 0 && x > 0 ? Math.ceil(Math.round(x * 100) / 100 / step) * step : r2(x))
+/** spodnja meja: strošek, strošek + moje delo, cena s tiskom po 2 €/h (vse za Osebno, ×2 za Poslovno) */
+export function floorFrom(own: number, work: number, osebnoExact: number, printHours: number, printRate: number, step: number, mult = 2): Floor {
+  const base = own + work
+  const safeExact = Math.max(base, osebnoExact - printHours * Math.max(0, printRate - SAFE_PRINT_RATE))
+  return { own: r2(own), floor: ceilStep(base, step), floorBiz: ceilStep(base * mult, step), safe: ceilStep(safeExact, step), safeBiz: ceilStep(safeExact * mult, step) }
+}
+export const jobFloor = (r: Result, s: Settings) =>
+  floorFrom(r.realCosts, r.services, Math.max(0, r.baseTotal - r.discount), r.printOverridden ? 0 : r.printHours, s.rates.printHourly, nz(s.rates.roundTo), s.rates.invoiceMultiplier || 2)

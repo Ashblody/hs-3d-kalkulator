@@ -1,3 +1,4 @@
+import { jobFloor } from './calc'
 import type { Customer, JobInput, Settings } from './types'
 import { quoteData, quoteNumber, safeName } from './quoteData'
 
@@ -74,6 +75,7 @@ export async function buildXlsx(job: JobInput, settings: Settings, id: string, c
     ...totals.map(([l, v]) => [l, '', r2(v)]), ['ZA PLAČILO', '', r2(r.gross)], ['Na kos', '', r2(r.perPiece)], [], ['Digitalne pravice', rights],
   ]
   const ph = r.printHours * settings.rates.printHourly
+  const fl = jobFloor(r, settings)
   const razclenitev: (string | number)[][] = [['Postavka', 'Znesek €'],
     ['CENA ZA STRANKO', ''],
     [`Tisk ${r2(r.printHours)} h × ${settings.rates.printHourly} €/h`, r2(r.printSale - (r.printOverridden ? (job.printCostOverride ?? 0) : r.material + r.consumables + r.otherDirect + r.adhesive))],
@@ -87,7 +89,9 @@ export async function buildXlsx(job: JobInput, settings: Settings, id: string, c
     ['MOJ STROŠEK – SAMO ZAME (ni v ceni)', ''],
     ['Material', r2(r.material)], ['Elektrika', r2(r.electricity)], ['Obraba tiskalnika', r2(r.wear)], ...(r.adhesive > 0 ? [[`Lepilo (${r.adhesiveLabel})`, r2(r.adhesive)] as [string, number]] : []), ['Potrošni material', r2(r.consumables + r.otherDirect)], ['Rezerva', r2(r.reserve)],
     ['Prevoz, pakiranje, dostava, ostalo', r2(r.realCosts - r.printCost)], ['Moj strošek skupaj', r2(r.realCosts)], [],
-    ['Dobiček (končna cena − moj strošek)', r2(r.profit)], ['Delež fiksnih stroškov', r2(r.fixedShare)], ['Ocena davka', r2(r.tax)], ['Predvideni zaslužek', r2(r.earnings)],
+    ['Dobiček (končna cena − moj strošek)', r2(r.profit)],
+    ['Spodnja meja – ne pojdi pod', ''], ['Pod tem izgubljaš (moj strošek)', fl.own], [`Najnižja cena (delo plačano)${job.mode === 'poslovno' ? ' ×2' : ''}`, job.mode === 'poslovno' ? fl.floorBiz : fl.floor],
+    [`Varno popuščanje (tisk 2 €/h)${job.mode === 'poslovno' ? ' ×2' : ''}`, job.mode === 'poslovno' ? fl.safeBiz : fl.safe], ['Popuščaj pri tisku, ne pri svojih urah – tiskalnik dela sam.', ''], ['Delež fiksnih stroškov', r2(r.fixedShare)], ['Ocena davka', r2(r.tax)], ['Predvideni zaslužek', r2(r.earnings)],
     [`Ur tiska (${r2(ph)} € po urni postavki)`, r2(r.printHours)], ['Ur dela', r2(r.laborHours)]]
   const wb = XLSX.utils.book_new()
   const ws1 = XLSX.utils.aoa_to_sheet(ponudba); ws1['!cols'] = [{ wch: 36 }, { wch: 26 }, { wch: 12 }]

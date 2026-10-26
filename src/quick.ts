@@ -1,5 +1,5 @@
 import type { JobInput, Settings } from './types'
-import { allTiers, calculate, effSettings, r2 } from './calc'
+import { allTiers, calculate, effSettings, floorFrom, r2 } from './calc'
 import { emptyJob } from './seed'
 
 export interface QuickInput { printH: number; grams: number; workH: number; matKg: number; printRate: number; workRate: number; markupPct: number; business: boolean; roundTo?: number }
@@ -65,4 +65,15 @@ export function quickToProject(q: QuickInput, name: string, s: Settings, custome
   // ure, ki niso cele minute, ohranimo natančno prek ur na kos
   if (Math.abs(input.batchHours + input.batchMinutes / 60 - h) > 1e-9) Object.assign(input, { useBatchTime: false, hoursPerPiece: h, minutesPerPiece: 0 })
   return { input, snapshot }
+}
+
+/** spodnja meja za Hitri: moj strošek = material + elektrika/obraba/rezerva iz podrobnega izračuna (privzeti tiskalnik) */
+export function quickFloor(q: QuickInput, s: Settings) {
+  const mat = { id: '__q', name: 'Hitri', maker: '', type: 'PLA', spoolG: 1000, prices: [{ label: 'Hitri', price: nz(q.matKg) }], activePrice: 0, adhesive: 0 }
+  const s2: Settings = { ...s, materials: [...s.materials, mat] }
+  const j: JobInput = { ...emptyJob(s.rates), materialId: '__q', pieces: 1, gramsPerPiece: nz(q.grams), useBatchTime: true, batchHours: 0, batchMinutes: 0, consumables: 0, mode: 'osebno' }
+  Object.assign(j, { useBatchTime: false, hoursPerPiece: nz(q.printH), minutesPerPiece: 0 })
+  const own = calculate(j, s2).realCosts
+  const r = quickCalc(q)
+  return floorFrom(own, r.work, r.exact, nz(q.printH), nz(q.printRate), nz(q.roundTo ?? 0), 2)
 }
