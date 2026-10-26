@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { quickCalc, quickText, quickDefaults, quickCompare, jobText } from './quick'
+import { quickCalc, quickText, quickDefaults, quickCompare, jobText, quickToProject } from './quick'
+import { calculate, r2 } from './calc'
 import { defaultSettings, demoJob } from './seed'
 const ex = { ...quickDefaults, printH: 20, grams: 800, workH: 3.5 }
 describe('Hitri izračun', () => {
@@ -23,5 +24,15 @@ describe('Hitri izračun', () => {
   it('povzetek projekta', () => {
     const t = jobText(demoJob(), defaultSettings())
     expect(t).toMatch(/Tiskanje: 18,8 h × 3,50 €\/h/); expect(t).toContain('Končna cena: 320,00 €')
+  })
+  it('shrani kot projekt: ista cena, Ponudba-tip', () => {
+    const s = defaultSettings()
+    for (const q of [ex, { ...ex, business: true }, { ...ex, markupPct: 10, printH: 7.25, grams: 123 }]) {
+      const p = quickToProject(q, 'Test', s)
+      const r = calculate(p.input, p.snapshot)
+      expect(r2(r.net)).toBe(q.business ? quickCalc(q).business : quickCalc(q).total)
+      expect(p.input.name).toBe('Test')
+    }
+    expect(quickToProject(ex, '  ', s).input.name).toBe('Hitri izračun')
   })
 })

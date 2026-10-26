@@ -18,9 +18,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <NumField label="Tisk: € na uro tiskalnika (material posebej)" value={s.rates.printHourly} onChange={setR('printHourly')} suffix="€/h" />
           <NumField label="Moje delo (sken, obdelava, CAD, slicer)" value={s.rates.labourHourly} onChange={setR('labourHourly')} suffix="€/h" />
-          <NumField label="Z računom: faktor" value={s.rates.invoiceMultiplier} onChange={setR('invoiceMultiplier')} suffix="×" />
-          <NumField label="Domači: € na uro tiskalnika (+ stroški)" value={s.rates.friendPrintHourly} onChange={setR('friendPrintHourly')} suffix="€/h" />
-          <NumField label="Domači: zaračunam % moje ure" value={s.rates.familyLabourPct} onChange={setR('familyLabourPct')} suffix="%" />
+          <NumField label="Poslovno (z računom): faktor" value={s.rates.invoiceMultiplier} onChange={setR('invoiceMultiplier')} suffix="×" />
           <NumField label="Prevoz" value={s.rates.km} onChange={setR('km')} suffix="€/km" />
           <NumField label="Minimalno naročilo" value={s.rates.minOrder} onChange={setR('minOrder')} suffix="€" />
           <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
@@ -49,7 +47,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
         <summary className="cursor-pointer font-semibold">Tiskalniki</summary>
         <div className="mt-3 space-y-3">
           {s.printers.map((p, i) => (
-            <div key={p.id} className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+            <div key={p.id} className="rounded-xl bg-slate-50 dark:bg-slate-800/60 dark:ring-1 dark:ring-slate-700/60 p-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="col-span-2"><TextField label="Naziv" value={p.name} onChange={(name) => setP(i, { name })} /></div>
                 <NumField label="Nabavna cena" value={p.price} onChange={(price) => setP(i, { price })} suffix="€" />
@@ -74,7 +72,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
         <summary className="cursor-pointer font-semibold">Materiali</summary>
         <div className="mt-3 space-y-3">
           {s.materials.map((m, i) => (
-            <div key={m.id} className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+            <div key={m.id} className="rounded-xl bg-slate-50 dark:bg-slate-800/60 dark:ring-1 dark:ring-slate-700/60 p-3">
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <div className="col-span-2"><TextField label="Naziv" value={m.name} onChange={(name) => setM(i, { name })} /></div>
                 <TextField label="Proizvajalec" value={m.maker} onChange={(maker) => setM(i, { maker })} />

@@ -33,12 +33,27 @@ export function fixBusiness(base: Settings['business'], stored: Partial<Settings
   return out
 }
 
+/** v7: 4 stopnje + Na roke/Z računom → Osebno / Poslovno (Stranka z računom → Poslovno) */
+export function migrateMode(j: Partial<JobInput> | undefined): JobInput['mode'] {
+  const m = (j?.mode ?? 'stranka') as string, inv = (j as { invoice?: boolean } | undefined)?.invoice
+  if (m === 'osebno' || m === 'poslovno') return m
+  return m === 'stranka' && inv !== false ? 'poslovno' : 'osebno'
+}
+const OLD_RATES = ['friendPrintHourly', 'familyLabourPct']
+const dropOldRates = <T,>(r: T): T => { for (const k of OLD_RATES) delete (r as Record<string, unknown>)[k]; return r }
+/** v7: digitalne postavke in pravice izklopljene, ostane samo Brez / STL / STEP */
+const stripOld = (j: JobInput): JobInput => {
+  delete (j as { invoice?: boolean }).invoice
+  for (const k of Object.keys(j.digital) as (keyof JobInput['digital'])[]) j.digital[k] = { ...j.digital[k], on: false }
+  return j
+}
+
 /** dopolni manjkajoča polja (npr. po uvozu starejše kopije) */
 export function normalize(raw: unknown): AppState {
   const base = initialState()
   const r = raw as Partial<AppState>
   if (!r || typeof r !== 'object' || !r.settings) throw new Error('Neveljavna datoteka')
-  const fixJob = (j: Partial<JobInput>) => ({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { kind: j?.fileSale?.kind ?? 'none' }, invoice: typeof j?.invoice === 'boolean' ? j.invoice : (j?.mode ?? 'stranka') === 'stranka', plates: Array.isArray(j?.plates) ? j.plates : [], usePlates: !!j?.usePlates, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } })
+  const fixJob = (j: Partial<JobInput>): JobInput => stripOld({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { kind: j?.fileSale?.kind ?? 'none' }, mode: migrateMode(j), plates: Array.isArray(j?.plates) ? j.plates : [], usePlates: !!j?.usePlates, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } } as JobInput)
   // migracija: dodaj nove privzete materiale, ne prepiši urejenih in ne vrni izbrisanih
   const seen = new Set(r.settings.materialSeeds ?? materialsV1Ids)
   const have = new Set((r.settings.materials ?? []).map((m) => m.id))
@@ -55,11 +70,11 @@ export function normalize(raw: unknown): AppState {
   // v6: zaokroževanje 5 → 1 € (samo če je še stara privzeta)
   if ((r.settings.ratesVersion ?? 1) < 6 && r.settings.rates?.roundTo === 5) storedRates.roundTo = 1
   // v6: datoteke samo kot doplačilo k tisku – odstrani stare nastavitve
-  for (const k of ['fileHandoverFee', 'repeatSalePct']) delete (storedRates as unknown as Record<string, unknown>)[k]
+  for (const k of ['fileHandoverFee', 'repeatSalePct', ...OLD_RATES]) delete (storedRates as unknown as Record<string, unknown>)[k]
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 6, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
-    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, rates: { ...base.settings.rates, ...p.snapshot.rates } } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
+    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 7, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
+    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, rates: dropOldRates({ ...base.settings.rates, ...p.snapshot.rates }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,
     dark: !!r.dark,

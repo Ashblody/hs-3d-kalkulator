@@ -1,7 +1,6 @@
 import type { JobInput, Settings } from './types'
 import { calculate, fileSaleInfo } from './calc'
 import { eur, num } from './format'
-import { digitalLabels } from './seed'
 
 /** Ponudba za tisk / "Shrani kot PDF" – prikaže se samo pri tiskanju */
 export default function Quote({ job, settings, number }: { job: JobInput; settings: Settings; number: string }) {
@@ -18,14 +17,13 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
   const disc = r.invoiceMult
   const fs = fileSaleInfo(job, settings)
   for (const [l, h, rate] of sv) if (h > 0) lines.push([l, `${num(h)} h × ${eur(rate * disc)}`, h * rate * disc])
-  for (const [k, d] of Object.entries(job.digital)) if (d.on) lines.push([digitalLabels[k as keyof typeof digitalLabels], `${num(d.hours)} h`, (d.hours * d.rate + d.extra) * disc])
-  if (job.fileSale?.kind && job.fileSale.kind !== 'none' && job.mode !== 'zase') lines.push([job.fileSale.kind === 'stl' ? 'Datoteka STL (urejen sken)' : 'Datoteka STEP (parametrični CAD)', 'zraven tiska', fs.price * disc])
+  if (job.fileSale?.kind && job.fileSale.kind !== 'none') lines.push([job.fileSale.kind === 'stl' ? 'Datoteka STL (urejen sken)' : 'Datoteka STEP (parametrični CAD)', 'zraven tiska', fs.price * disc])
   if (r.transport > 0) lines.push(['Prevoz', `${num(job.km)} km`, r.transport * disc])
   if (r.packaging > 0) lines.push(['Pakiranje', '', r.packaging * disc])
   if (r.delivery > 0) lines.push(['Dostava', '', r.delivery * disc])
   if (r.otherCosts > 0) lines.push(['Ostalo', '', r.otherCosts * disc])
   if (r.discount > 0) lines.push(['Popust', '', -r.discount])
-  const rights = [job.rights.physicalOnly && 'samo fizični izdelek, brez digitalnih datotek', job.rights.personalUse && 'datoteka za osebno uporabo naročnika', job.rights.commercial && 'pravica do komercialne uporabe', job.rights.sourceCad && 'prenos izvorne CAD-datoteke'].filter(Boolean)
+  const rights = job.fileSale?.kind === 'stl' ? ['datoteka STL za osebno uporabo naročnika'] : job.fileSale?.kind === 'step' ? ['datoteka STEP za osebno uporabo naročnika'] : ['samo fizični izdelek, brez digitalnih datotek']
   return (
     <div className="text-black bg-white p-8 text-sm font-sans">
       <div className="flex justify-between items-start border-b-4 border-emerald-600 pb-4">

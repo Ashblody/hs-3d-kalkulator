@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
-import type { Settings } from './types'
-import { copyText, quickCalc, quickCompare, quickDefaults, quickText, type QuickInput } from './quick'
+import type { JobInput, Settings } from './types'
+import { copyText, quickToProject, quickCalc, quickCompare, quickDefaults, quickText, type QuickInput } from './quick'
 import { eur } from './format'
 import { Check, NumField, Row } from './ui'
 
 const KEY = 'hs3d-hitri'
 const load = (): QuickInput => { try { return { ...quickDefaults, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } } catch { return quickDefaults } }
 
-export default function Quick({ settings, flash }: { settings: Settings; flash: (m: string) => void }) {
+export default function Quick({ settings, flash, onSave }: { settings: Settings; flash: (m: string) => void; onSave: (p: { input: JobInput; snapshot: Settings }) => void }) {
   const [q, setQ] = useState<QuickInput>(load)
+  const [name, setName] = useState('')
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(q)) }, [q])
   const set = (k: keyof QuickInput) => (v: number | boolean) => setQ({ ...q, [k]: v })
   const r = quickCalc(q); const c = quickCompare(q, settings)
@@ -31,6 +32,10 @@ export default function Quick({ settings, flash }: { settings: Settings; flash: 
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-bold">KONČNA CENA</span><span className="text-3xl font-black tabular-nums" data-testid="quick-total">{eur(r.total)}</span></div>
           {q.business && <div className="flex justify-between items-baseline"><span className="font-semibold">Poslovne stranke (2×)</span><span className="text-2xl font-black tabular-nums text-emerald-600" data-testid="quick-business">{eur(r.business)}</span></div>}
           <button className="btn-p w-full mt-3" onClick={async () => flash((await copyText(quickText(q))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
+          <div className="flex gap-2 mt-2">
+            <input className="inp" placeholder="Ime projekta" value={name} onChange={(e) => setName(e.target.value)} />
+            <button className="btn whitespace-nowrap" onClick={() => { onSave(quickToProject(q, name, settings)); setName('') }}>Shrani kot projekt</button>
+          </div>
         </div>
         <div className="card text-sm text-slate-600 dark:text-slate-300">Podrobni kalkulator (Na roke, PLA, z elektriko in obrabo, zaokroženo): <b>{eur(c.detailed)}</b> · razlika {c.diff >= 0 ? '+' : ''}{eur(c.diff)}</div>
       </div>

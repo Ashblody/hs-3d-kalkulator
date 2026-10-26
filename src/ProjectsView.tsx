@@ -33,7 +33,7 @@ export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDe
             <div className="flex justify-between gap-2">
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900 dark:text-white truncate"><span className={`mr-2 rounded-full px-2 py-0.5 text-xs ${statusColors[p.status] ?? ''}`}>{statusLabels[p.status] ?? p.status}</span>{p.input.name || '(brez imena)'}</div>
-                <div className="text-xs text-slate-500">{p.input.client || '—'} · {p.input.date} · {p.input.mode}</div>
+                <div className="text-xs text-slate-500">{p.input.client || '—'} · {p.input.date} · {p.input.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}</div>
               </div>
               <div className="text-right"><div className="font-bold text-emerald-600">{eur(r.gross)}</div><div className="text-xs text-slate-500">zaslužek {eur(r.earnings)}</div></div>
             </div>

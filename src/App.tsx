@@ -77,7 +77,10 @@ export default function App() {
           onPdf={(p) => printQuote(p.input, p.snapshot, p.id)}
           onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual } : x)) })}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />}
-        {tab === 'hitri' && <Quick settings={st.settings} flash={flash} />}
+        {tab === 'hitri' && <Quick settings={st.settings} flash={flash} onSave={({ input, snapshot }) => {
+          const p = { ...newProject(input, snapshot) }
+          setSt({ ...st, projects: [...st.projects, p] }); flash(`Shranjeno v Projekti: ${input.name}`)
+        }} />}
         {tab === 'posel' && <Dashboard projects={st.projects} settings={st.settings} />}
         {tab === 'nastavitve' && (<>
           <div className="card mb-4 flex flex-wrap gap-2 items-center">

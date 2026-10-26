@@ -40,16 +40,16 @@ describe('pravila', () => {
     const j = { ...demoJob(), useBatchTime: true, batchHours: 10, batchMinutes: 30 }
     expect(totalPrintHours(j)).toBe(10.5)
   })
-  it('na roke vs z računom: celota × 2', () => {
-    const j = { ...demoJob(), mode: 'prijatelj' as const, invoice: false, km: 10 }
-    const a = calculate(j, s), b = calculate({ ...j, invoice: true }, s)
+  it('osebno vs poslovno: celota × 2', () => {
+    const j = { ...demoJob(), mode: 'osebno' as const, km: 10 }
+    const a = calculate(j, s), b = calculate({ ...j, mode: 'poslovno' }, s)
     expect(b.net).toBeCloseTo(a.net * 2)
     expect(a.services).toBeCloseTo(70)
   })
-  it('zase: samo stroški, čas informativno', () => {
-    const a = calculate({ ...demoJob(), mode: 'zase' }, s)
-    expect(a.net).toBeCloseTo(a.printCost)
-    expect(r2(a.timeValue)).toBe(70)
+  it('moj strošek in dobiček', () => {
+    const a = calculate({ ...demoJob(), mode: 'osebno', km: 10 }, s)
+    expect(a.realCosts).toBeCloseTo(a.printCost + 3)
+    expect(a.profit).toBeCloseTo(a.net - a.realCosts)
   })
   it('minimalno naročilo', () => {
     const a = calculate({ ...demoJob(), scanH: 0, editH: 0, cadH: 0, prepH: 0, finishH: 0, pieces: 1, gramsPerPiece: 5, hoursPerPiece: 0, minutesPerPiece: 20, consumables: 0 }, s)
@@ -96,30 +96,15 @@ describe('migracija materialov', () => {
   })
 })
 
-describe('stopnje', () => {
-  const s = noRound()
-  const t = (mode: 'stranka' | 'prijatelj' | 'zase') => calculate({ ...demoJob(), mode }, s)
-  it('izpis', () => { for (const m of ['stranka', 'prijatelj', 'zase'] as const) { const x = t(m); console.log(m, JSON.stringify({ stroski: r2(x.printCost), tisk: r2(x.printSale), storitve: r2(x.services), skupaj: r2(x.net), kos: r2(x.net / 4) })) } })
-  it('zase = samo stroški', () => expect(t('zase').printSale).toBeCloseTo(t('zase').printCost))
-  it('domači: stroški + €/h tiska, delo po nastavitvi (privzeto 0)', () => {
-    const a = calculate({ ...demoJob(), mode: 'domaci' }, s)
-    expect(a.printSale).toBeCloseTo(a.printCost + a.printHours * 1); expect(a.services).toBe(0)
-    const s2 = { ...s, rates: { ...s.rates, friendPrintHourly: 2, familyLabourPct: 50 } }
-    const b = calculate({ ...demoJob(), mode: 'domaci' }, s2)
-    expect(b.printSale).toBeCloseTo(b.printCost + b.printHours * 2); expect(b.services).toBeCloseTo(35)
-  })
-})
-
 describe('datoteka zraven tiska', () => {
   const s = noRound()
-  const f = (kind: 'none' | 'stl' | 'step', mode: 'stranka' | 'prijatelj' | 'zase' = 'stranka') => calculate({ ...demoJob(), mode, fileSale: { kind } }, s)
-  it('izpis', () => { for (const k of ['stl', 'step'] as const) for (const m of ['stranka', 'prijatelj', 'zase'] as const) { const x = f(k, m); console.log('FILE', k, m, JSON.stringify({ datoteka: r2(x.digital), storitve: r2(x.services), skupaj: r2(x.net), kos: r2(x.perPiece) })) } })
+  const f = (kind: 'none' | 'stl' | 'step', mode: 'osebno' | 'poslovno' = 'poslovno') => calculate({ ...demoJob(), mode, fileSale: { kind } }, s)
   it('STL 15 / STEP 30, storitve normalno', () => {
     expect(f('stl').digital).toBe(15); expect(f('step').digital).toBe(30)
     expect(r2(f('step').services)).toBe(70)
     expect(r2(f('step').net)).toBe(r2(f('none').net + 60))
   })
-  it('prijatelj brez popusta, zase 0', () => { expect(r2(f('step', 'prijatelj').digital)).toBe(30); expect(f('stl', 'zase').digital).toBe(0) })
+  it('osebno: datoteka po fiksni ceni', () => expect(r2(f('step', 'osebno').digital)).toBe(30))
   it('doplačilo je nastavitev', () => expect(calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, { ...s, rates: { ...s.rates, fileAddonStl: 20 } }).digital).toBe(20))
   it('stari shranjeni posli se naložijo', () => {
     const old = structuredClone(s) as unknown as { rates: Record<string, number> }; delete old.rates.fileAddonStl; delete old.rates.fileAddonStep; old.rates.repeatSalePct = 30
@@ -128,9 +113,9 @@ describe('datoteka zraven tiska', () => {
     expect('repeatSalePct' in st.settings.rates).toBe(false)
     expect(calculate(st.current, st.settings).digital).toBe(30)
   })
-  it('ročne digitalne postavke še delujejo', () => {
+  it('stare digitalne postavke se ne obračunajo več', () => {
     const j = demoJob(); j.digital.raw = { on: true, hours: 1, rate: 20, extra: 5 }
-    expect(calculate(j, s).digital).toBe(25)
+    expect(calculate(j, s).digital).toBe(0)
   })
 })
 
@@ -165,11 +150,10 @@ describe('zaokroževanje, plošče, statusi, podvoji', () => {
     expect(r.net).toBe(320); expect(r2(r.rounding)).toBe(0.68); expect(r2(r.netBeforeRounding)).toBe(319.32)
     console.log('ROUND', JSON.stringify({ stl: calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, defaultSettings()).net, step: calculate({ ...demoJob(), fileSale: { kind: 'step' } }, defaultSettings()).net }))
   })
-  it('na 1 € in izklop; zase se ne zaokroži', () => {
+  it('na 1 € in izklop', () => {
     const s = defaultSettings(); s.rates.roundTo = 1
     expect(calculate(demoJob(), s).net).toBe(320)
     s.rates.roundTo = 0; expect(r2(calculate(demoJob(), s).net)).toBe(319.32)
-    expect(r2(calculate({ ...demoJob(), mode: 'zase' }, defaultSettings()).net)).toBe(35.49)
     expect(calculate({ ...demoJob(), scanH: 0, editH: 0, cadH: 0, prepH: 0, finishH: 0, pieces: 1, gramsPerPiece: 5, hoursPerPiece: 0, minutesPerPiece: 20, consumables: 0 }, defaultSettings()).net).toBe(15)
   })
   it('plošče seštejejo čas in grame, material po plošči', () => {
@@ -199,10 +183,10 @@ describe('šefov model: referenčni posel 5 h, 800 g, 3,5 h dela', () => {
     const t = allTiers(ref(m), defaultSettings())
     console.log('REF', m, JSON.stringify(Object.fromEntries(Object.entries(t).map(([k, r]) => [k, { mat: r2(r.material), tisk: r2(r.printSale), stroski: r2(r.printCost), delo: r2(r.services), pred: r2(r.netBeforeRounding), cena: r2(r.net) }]))))
   })
-  it('PLA: na roke 102 €, z računom 203 €', () => {
+  it('PLA: osebno 102 €, poslovno 203 €', () => {
     const t = allTiers(ref('bb2-pla'), defaultSettings())
-    expect(r2(t.naroke.netBeforeRounding)).toBe(101.09); expect(t.naroke.net).toBe(102); expect(t.racun.net).toBe(203)
-    expect(t.racun.net).toBe(Math.ceil(t.naroke.netBeforeRounding * 2)); expect(t.domaci.services).toBe(0)
+    expect(r2(t.osebno.netBeforeRounding)).toBe(101.09); expect(t.osebno.net).toBe(102); expect(t.poslovno.net).toBe(203)
+    expect(t.poslovno.net).toBe(Math.ceil(t.osebno.netBeforeRounding * 2))
   })
   it('migracija: 36 → 20, lastna vrednost ostane', () => {
     const o = defaultSettings(); o.ratesVersion = 4; o.rates.labourHourly = 36
@@ -222,5 +206,26 @@ describe('zaokroževanje 1 € privzeto', () => {
   it('izpis 20 h / 800 g PLA / 3,5 h', () => {
     const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, defaultSettings())
     console.log('R20', JSON.stringify(Object.fromEntries(Object.entries(t).map(([k, r]) => [k, { mat: r2(r.material), tisk: r2(r.printSale), stroski: r2(r.printCost), delo: r2(r.services), pred: r2(r.netBeforeRounding), cena: r2(r.net) }]))))
+  })
+})
+
+import { migrateMode } from './store'
+describe('v7: Osebno / Poslovno', () => {
+  it('migracija stopenj', () => {
+    expect([migrateMode({ mode: 'stranka' as never }), migrateMode({ mode: 'stranka' as never, invoice: false } as never), migrateMode({ mode: 'prijatelj' as never, invoice: true } as never), migrateMode({ mode: 'domaci' as never }), migrateMode({ mode: 'zase' as never }), migrateMode({ mode: 'poslovno' })])
+      .toEqual(['poslovno', 'osebno', 'osebno', 'osebno', 'osebno', 'poslovno'])
+  })
+  it('normalize: projekti, stare nastavitve Domači odstranjene', () => {
+    const st0 = initialState(); const o = structuredClone(st0.settings) as never as { rates: Record<string, number>; ratesVersion: number }
+    o.rates.friendPrintHourly = 1; o.rates.familyLabourPct = 0; o.ratesVersion = 6
+    const st = normalize({ settings: o as never, projects: [{ ...st0.projects[0], input: { ...st0.projects[0].input, mode: 'zase' as never } }, { ...st0.projects[0], id: 'y', input: { ...st0.projects[0].input, mode: 'stranka' as never, invoice: true } as never }] })
+    expect(st.projects.map((p) => p.input.mode)).toEqual(['osebno', 'poslovno'])
+    expect('friendPrintHourly' in st.settings.rates).toBe(false); expect('familyLabourPct' in st.settings.rates).toBe(false)
+    expect('invoice' in st.projects[1].input).toBe(false)
+  })
+  it('referenčni posel 20 h, 800 g PLA, 3,5 h', () => {
+    const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, defaultSettings())
+    console.log('V7', JSON.stringify({ osebno: t.osebno.net, poslovno: t.poslovno.net, strosek: r2(t.osebno.realCosts), dobicekO: r2(t.osebno.profit), dobicekP: r2(t.poslovno.profit) }))
+    expect(t.osebno.net).toBe(154); expect(t.poslovno.net).toBe(308)
   })
 })

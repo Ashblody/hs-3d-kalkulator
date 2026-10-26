@@ -8,7 +8,7 @@ const billable = new Set(['sprejeto', 'natisnjeno', 'placano'])
 
 export default function Dashboard({ projects, settings }: { projects: Project[]; settings: Settings }) {
   const month = new Date().toISOString().slice(0, 7)
-  const inMonth = projects.filter((p) => billable.has(p.status) && p.input.date.startsWith(month) && p.input.mode !== 'zase')
+  const inMonth = projects.filter((p) => billable.has(p.status) && p.input.date.startsWith(month))
   let revenue = 0, costs = 0, hours = 0, tax = 0
   for (const p of inMonth) { const r = calculate(p.input, p.snapshot); revenue += r.net; costs += r.realCosts; hours += r.laborHours; tax += r.tax }
   const b = settings.business
