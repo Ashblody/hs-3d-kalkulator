@@ -38,7 +38,7 @@ export function normalize(raw: unknown): AppState {
   const base = initialState()
   const r = raw as Partial<AppState>
   if (!r || typeof r !== 'object' || !r.settings) throw new Error('Neveljavna datoteka')
-  const fixJob = (j: Partial<JobInput>) => ({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { kind: j?.fileSale?.kind ?? 'none' }, plates: Array.isArray(j?.plates) ? j.plates : [], usePlates: !!j?.usePlates, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } })
+  const fixJob = (j: Partial<JobInput>) => ({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { kind: j?.fileSale?.kind ?? 'none' }, invoice: typeof j?.invoice === 'boolean' ? j.invoice : (j?.mode ?? 'stranka') === 'stranka', plates: Array.isArray(j?.plates) ? j.plates : [], usePlates: !!j?.usePlates, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } })
   // migracija: dodaj nove privzete materiale, ne prepiši urejenih in ne vrni izbrisanih
   const seen = new Set(r.settings.materialSeeds ?? materialsV1Ids)
   const have = new Set((r.settings.materials ?? []).map((m) => m.id))
@@ -54,8 +54,8 @@ export function normalize(raw: unknown): AppState {
   for (const k of ['fileHandoverFee', 'repeatSalePct']) delete (storedRates as unknown as Record<string, unknown>)[k]
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 3, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
-    projects: (r.projects ?? []).map((p) => ({ ...p, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
+    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 4, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
+    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, rates: { ...base.settings.rates, ...p.snapshot.rates } } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,
     dark: !!r.dark,

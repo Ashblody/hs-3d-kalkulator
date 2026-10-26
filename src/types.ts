@@ -1,4 +1,4 @@
-export type Mode = 'stranka' | 'prijatelj' | 'zase'
+export type Mode = 'stranka' | 'prijatelj' | 'domaci' | 'zase'
 export type OrderType = 'tisk' | 'sken' | 'cad' | 'kombinirano' | 'digitalno'
 export type Status = 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano'
 /** plošča iz slicerja (Bambu Studio / PrusaSlicer) */
@@ -36,6 +36,14 @@ export interface Rates {
   fileAddonStep: number
   /** Prijatelj: € na uro tiskanja namesto % pribitka */
   friendPrintHourly: number
+  /** v4: tisk po fiksni ceni na uro tiskalnika (material posebej po strošku) */
+  printHourly: number
+  /** v4: ena postavka za moje delo (sken, obdelava, CAD, slicer, dodelava) */
+  labourHourly: number
+  /** v4: Z računom (s.p.) – celota × faktor */
+  invoiceMultiplier: number
+  /** Domači: delež moje ure, ki ga zaračunam (0 = delo zastonj) */
+  familyLabourPct: number
   scan: number
   edit: number
   cad: number
@@ -102,6 +110,8 @@ export interface JobInput {
   otherCosts: number
   discount: number
   friendDiscountPct: number
+  /** Z računom (s.p.): celota × invoiceMultiplier */
+  invoice: boolean
   digital: Record<DigitalKind, DigitalItem>
   /** datoteka zraven tiska (fiksno doplačilo) */
   fileSale: FileSale

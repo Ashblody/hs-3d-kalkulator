@@ -34,6 +34,7 @@ export interface Result {
   markup: number; printSale: number; printMarginPct: number
   servicesStandard: number; servicesDiscount: number; services: number
   digital: number; laborHours: number
+  baseTotal: number; invoiceMult: number; invoiceExtra: number
   transport: number; packaging: number; delivery: number; otherCosts: number; discount: number
   subtotal: number; minOrderApplied: boolean
   netBeforeRounding: number; rounding: number
@@ -66,17 +67,18 @@ export function calculate(j: JobInput, s: Settings): Result {
   const printCost = printOverridden ? (j.printCostOverride as number) : printBeforeReserve + reserve
 
   const zase = j.mode === 'zase'
-  // Stranka: % pribitek · Prijatelj: stroški + € na uro tiskanja · Zase: samo stroški
-  const markupPct = j.mode === 'stranka' ? nz(j.markupPct) : 0
-  const friendFee = j.mode === 'prijatelj' ? printHours * nz(s.rates.friendPrintHourly) : 0
-  const printSale = printCost * (1 + markupPct / 100) + friendFee
+  const r = s.rates
+  // v4 (šef): tisk = fiksno € na uro tiskalnika + material/potrošni po strošku; Zase: samo stroški
+  const printDirect = printOverridden ? (j.printCostOverride as number) : material + consumables + otherDirect
+  const domaci = j.mode === 'domaci'
+  // Domači: stroški tiska + € na uro tiskalnika (kot stari Prijatelj)
+  const printSale = zase ? printCost : domaci ? printCost + printHours * nz(r.friendPrintHourly) : printHours * nz(r.printHourly) + printDirect
   const markup = printSale - printCost
 
-  const r = s.rates
   const fs = fileSaleInfo(j, s)
+  const L = nz(r.labourHourly)
   const servicesStandard =
-    nz(j.scanH) * r.scan + nz(j.editH) * r.edit + nz(j.cadH) * r.cad + nz(j.reverseH) * r.reverse +
-    nz(j.prepH) * r.prep + nz(j.finishH) * r.prep + nz(j.extraWorkH) * nz(j.extraWorkRate)
+    (nz(j.scanH) + nz(j.editH) + nz(j.cadH) + nz(j.reverseH) + nz(j.prepH) + nz(j.finishH)) * L + nz(j.extraWorkH) * nz(j.extraWorkRate)
   let digital = 0, digitalHours = 0
   for (const k of Object.keys(j.digital) as DigitalKind[]) {
     const d = j.digital[k]
@@ -87,17 +89,19 @@ export function calculate(j: JobInput, s: Settings): Result {
   digital += fs.price
   const laborHours = nz(j.scanH) + nz(j.editH) + nz(j.cadH) + nz(j.reverseH) + nz(j.prepH) + nz(j.finishH) + nz(j.extraWorkH) + digitalHours
   const timeValue = servicesStandard + digital
-  // prijateljski popust samo na storitve (in delo za datoteke), ne na material/prevoz/poštnino
-  const discPct = j.mode === 'prijatelj' ? nz(j.friendDiscountPct) / 100 : 0
-  const servicesDiscount = zase ? servicesStandard : servicesStandard * discPct
+  // na roke / prijatelj = osnovna cena (brez popusta); Zase: delo ni obračunano
+  const servicesDiscount = zase ? servicesStandard : domaci ? servicesStandard * (1 - Math.min(100, nz(r.familyLabourPct)) / 100) : 0
   const services = servicesStandard - servicesDiscount
-  const digitalBilled = zase ? 0 : digital * (1 - discPct)
+  const digitalBilled = zase ? 0 : digital
+  const invoiceMult = !zase && !domaci && j.invoice ? (Number.isFinite(r.invoiceMultiplier) && r.invoiceMultiplier > 0 ? r.invoiceMultiplier : 1) : 1
 
   const transport = nz(j.km) * r.km
   const packaging = nz(j.packaging), delivery = nz(j.delivery), otherCosts = nz(j.otherCosts)
   const discount = zase ? 0 : nz(j.discount)
-  const subtotal = printSale + services + digitalBilled + transport + packaging + delivery + otherCosts - discount
-  const minOrderApplied = !zase && subtotal > 0 && subtotal < r.minOrder
+  const baseTotal = printSale + services + digitalBilled + transport + packaging + delivery + otherCosts
+  const invoiceExtra = baseTotal * (invoiceMult - 1)
+  const subtotal = baseTotal + invoiceExtra - discount
+  const minOrderApplied = !zase && j.mode !== 'domaci' && subtotal > 0 && subtotal < r.minOrder
   const netBeforeRounding = Math.max(0, minOrderApplied ? r.minOrder : subtotal)
   const step = nz(r.roundTo)
   const net = !zase && step > 0 && netBeforeRounding > 0 ? Math.ceil(Math.round(netBeforeRounding * 100) / 100 / step) * step : netBeforeRounding
@@ -119,7 +123,7 @@ export function calculate(j: JobInput, s: Settings): Result {
     printHours, kg, powerW, material, electricity, wear, consumables, otherDirect,
     printBeforeReserve, reserve, printCost, printOverridden, markup, printSale,
     printMarginPct: printSale > 0 ? (markup / printSale) * 100 : 0,
-    servicesStandard, servicesDiscount, services, digital: digitalBilled, laborHours,
+    servicesStandard, servicesDiscount, services, digital: digitalBilled, laborHours, baseTotal, invoiceMult, invoiceExtra,
     transport, packaging, delivery, otherCosts, discount, subtotal, minOrderApplied,
     netBeforeRounding, rounding, net, vat, gross, perPiece, timeValue, fixedShare, tax, realCosts, earnings, earningsPerHour, belowTarget,
   }
@@ -146,4 +150,20 @@ export function validateJob(j: JobInput): string[] {
   if (j.minutesPerPiece >= 60 || j.batchMinutes >= 60) e.push('Minute morajo biti manj kot 60.')
   if (!Number.isInteger(j.pieces) || j.pieces < 1) e.push('Število kosov mora biti celo število, vsaj 1.')
   return e
+}
+
+/** Vse cene hkrati za isti posel */
+export const TIERS = [
+  ['naroke', 'Na roke', 'prijatelji, gotovina'],
+  ['racun', 'Z računom', 's.p., račun'],
+  ['domaci', 'Domači', 'stroški + €/h tiska'],
+  ['zase', 'Zase', 'samo stroški'],
+] as const
+export function allTiers(j: JobInput, s: Settings) {
+  return {
+    naroke: calculate({ ...j, mode: 'prijatelj', invoice: false }, s),
+    racun: calculate({ ...j, mode: 'stranka', invoice: true }, s),
+    domaci: calculate({ ...j, mode: 'domaci', invoice: false }, s),
+    zase: calculate({ ...j, mode: 'zase', invoice: false }, s),
+  }
 }

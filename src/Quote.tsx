@@ -8,22 +8,22 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
   const r = calculate(job, settings)
   const mat = settings.materials.find((m) => m.id === job.materialId)
   const lines: [string, string, number][] = []
-  if (r.printSale > 0) lines.push([`3D-tisk – ${job.pieces} kos, ${mat?.name ?? ''}`, `${num(r.printHours)} h tiska`, r.printSale])
+  if (r.printSale > 0) lines.push([`3D-tisk – ${job.pieces} kos, ${mat?.name ?? ''}`, `${num(r.printHours)} h tiska`, r.printSale * r.invoiceMult])
   const sv: [string, number, number][] = [
-    ['3D-skeniranje', job.scanH, settings.rates.scan], ['Urejanje skena', job.editH, settings.rates.edit],
-    ['CAD-modeliranje', job.cadH, settings.rates.cad], ['Reverse engineering', job.reverseH, settings.rates.reverse],
-    ['Priprava tiska', job.prepH, settings.rates.prep], ['Dodelava', job.finishH, settings.rates.prep],
+    ['3D-skeniranje', job.scanH, settings.rates.labourHourly], ['Urejanje skena', job.editH, settings.rates.labourHourly],
+    ['CAD-modeliranje', job.cadH, settings.rates.labourHourly], ['Reverse engineering', job.reverseH, settings.rates.labourHourly],
+    ['Priprava tiska', job.prepH, settings.rates.labourHourly], ['Dodelava', job.finishH, settings.rates.labourHourly],
     ['Dodatno delo', job.extraWorkH, job.extraWorkRate],
   ]
-  const disc = job.mode === 'prijatelj' ? 1 - job.friendDiscountPct / 100 : 1
+  const disc = r.invoiceMult
   const fs = fileSaleInfo(job, settings)
   for (const [l, h, rate] of sv) if (h > 0) lines.push([l, `${num(h)} h × ${eur(rate * disc)}`, h * rate * disc])
   for (const [k, d] of Object.entries(job.digital)) if (d.on) lines.push([digitalLabels[k as keyof typeof digitalLabels], `${num(d.hours)} h`, (d.hours * d.rate + d.extra) * disc])
   if (job.fileSale?.kind && job.fileSale.kind !== 'none' && job.mode !== 'zase') lines.push([job.fileSale.kind === 'stl' ? 'Datoteka STL (urejen sken)' : 'Datoteka STEP (parametrični CAD)', 'zraven tiska', fs.price * disc])
-  if (r.transport > 0) lines.push(['Prevoz', `${num(job.km)} km`, r.transport])
-  if (r.packaging > 0) lines.push(['Pakiranje', '', r.packaging])
-  if (r.delivery > 0) lines.push(['Dostava', '', r.delivery])
-  if (r.otherCosts > 0) lines.push(['Ostalo', '', r.otherCosts])
+  if (r.transport > 0) lines.push(['Prevoz', `${num(job.km)} km`, r.transport * disc])
+  if (r.packaging > 0) lines.push(['Pakiranje', '', r.packaging * disc])
+  if (r.delivery > 0) lines.push(['Dostava', '', r.delivery * disc])
+  if (r.otherCosts > 0) lines.push(['Ostalo', '', r.otherCosts * disc])
   if (r.discount > 0) lines.push(['Popust', '', -r.discount])
   const rights = [job.rights.physicalOnly && 'samo fizični izdelek, brez digitalnih datotek', job.rights.personalUse && 'datoteka za osebno uporabo naročnika', job.rights.commercial && 'pravica do komercialne uporabe', job.rights.sourceCad && 'prenos izvorne CAD-datoteke'].filter(Boolean)
   return (

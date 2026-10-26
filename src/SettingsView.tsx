@@ -16,17 +16,14 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
       <details className="card" open>
         <summary className="cursor-pointer font-semibold">Cenik storitev</summary>
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <NumField label="3D-skeniranje" value={s.rates.scan} onChange={setR('scan')} suffix="€/h" />
-          <NumField label="Urejanje skena" value={s.rates.edit} onChange={setR('edit')} suffix="€/h" />
-          <NumField label="CAD-modeliranje" value={s.rates.cad} onChange={setR('cad')} suffix="€/h" />
-          <NumField label="Reverse engineering" value={s.rates.reverse} onChange={setR('reverse')} suffix="€/h" />
-          <NumField label="Priprava tiska in dodelava" value={s.rates.prep} onChange={setR('prep')} suffix="€/h" />
+          <NumField label="Tisk: € na uro tiskalnika (material posebej)" value={s.rates.printHourly} onChange={setR('printHourly')} suffix="€/h" />
+          <NumField label="Moje delo (sken, obdelava, CAD, slicer)" value={s.rates.labourHourly} onChange={setR('labourHourly')} suffix="€/h" />
+          <NumField label="Z računom: faktor" value={s.rates.invoiceMultiplier} onChange={setR('invoiceMultiplier')} suffix="×" />
+          <NumField label="Domači: € na uro tiskalnika (+ stroški)" value={s.rates.friendPrintHourly} onChange={setR('friendPrintHourly')} suffix="€/h" />
+          <NumField label="Domači: zaračunam % moje ure" value={s.rates.familyLabourPct} onChange={setR('familyLabourPct')} suffix="%" />
           <NumField label="Prevoz" value={s.rates.km} onChange={setR('km')} suffix="€/km" />
           <NumField label="Minimalno naročilo" value={s.rates.minOrder} onChange={setR('minOrder')} suffix="€" />
-          <NumField label="Privzeti pribitek tiska" value={s.rates.markupPct} onChange={setR('markupPct')} suffix="%" />
           <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
-          <NumField label="Prijateljski popust (storitve)" value={s.rates.friendDiscountPct} onChange={setR('friendDiscountPct')} suffix="%" />
-          <NumField label="Prijatelj: € na uro tiskanja (namesto pribitka)" value={s.rates.friendPrintHourly} onChange={setR('friendPrintHourly')} suffix="€/h" />
           <label className="block"><span className="lbl">Zaokroževanje ponudbe (navzgor)</span>
             <select className="inp" value={s.rates.roundTo} onChange={(e) => setR('roundTo')(Number(e.target.value))}><option value={0}>Izklop</option><option value={1}>Na 1 €</option><option value={5}>Na 5 €</option></select></label>
           <NumField label="Doplačilo: STL zraven tiska" value={s.rates.fileAddonStl} onChange={setR('fileAddonStl')} suffix="€" />

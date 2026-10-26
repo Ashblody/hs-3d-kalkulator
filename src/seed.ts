@@ -67,6 +67,7 @@ export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, mar
 export const rates: Rates = {
   scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
   markupPct: 100, reservePct: 10, friendDiscountPct: 15, friendPrintHourly: 1, fileAddonStl: 15, roundTo: 5, fileAddonStep: 30,
+  printHourly: 3.5, labourHourly: 36, invoiceMultiplier: 2, familyLabourPct: 0,
 }
 
 export const business: Business = {
@@ -74,7 +75,7 @@ export const business: Business = {
   taxPct: 0, vatEnabled: false, vatPct: 22,
 }
 
-export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 3, rates, business })
+export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 4, rates, business })
 
 export const digitalLabels: Record<DigitalKind, string> = {
   raw: 'Surov 3D-sken (OBJ/STL)',
@@ -100,8 +101,8 @@ export const emptyJob = (r: Rates = rates): JobInput => ({
   pieces: 1, gramsPerPiece: 0, hoursPerPiece: 0, minutesPerPiece: 0,
   useBatchTime: false, usePlates: false, plates: [], batchHours: 0, batchMinutes: 0, extraMaterialG: 0,
   consumables: 0, otherDirect: 0, reservePct: r.reservePct, markupPct: r.markupPct, printCostOverride: null,
-  scanH: 0, editH: 0, cadH: 0, reverseH: 0, prepH: 0, finishH: 0, extraWorkH: 0, extraWorkRate: r.prep,
-  km: 0, packaging: 0, delivery: 0, otherCosts: 0, discount: 0, friendDiscountPct: r.friendDiscountPct,
+  scanH: 0, editH: 0, cadH: 0, reverseH: 0, prepH: 0, finishH: 0, extraWorkH: 0, extraWorkRate: r.labourHourly ?? r.prep,
+  km: 0, packaging: 0, delivery: 0, otherCosts: 0, discount: 0, friendDiscountPct: r.friendDiscountPct, invoice: true,
   digital: emptyDigital(r),
   fileSale: { kind: 'none' },
   rights: { physicalOnly: true, personalUse: false, commercial: false, sourceCad: false },
