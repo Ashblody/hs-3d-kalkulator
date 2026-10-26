@@ -8,7 +8,9 @@ import Dashboard from './Dashboard'
 import Quote from './Quote'
 import Quick from './Quick'
 import { copyText, jobText } from './quick'
-import { exportJson, importJson } from './backup'
+import { exportJson, importJson, mergeStates } from './backup'
+import { buildPdf, buildXlsx, pdfName, saveFile, xlsxName } from './exporters'
+import InstallHint from './InstallHint'
 
 type Tab = 'kalk' | 'hitri' | 'projekti' | 'posel' | 'nastavitve'
 const tabs: [Tab, string][] = [['hitri', 'Hitri'], ['kalk', 'Podroben'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
@@ -25,6 +27,14 @@ export default function App() {
   }
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 2500) }
 
+  const doExport = async (job: JobInput, settings: Settings, id: string, kind: 'pdf' | 'xlsx') => {
+    try {
+      flash(kind === 'pdf' ? 'Pripravljam PDF …' : 'Pripravljam Excel …')
+      const blob = kind === 'pdf' ? await buildPdf(job, settings, id) : await buildXlsx(job, settings, id)
+      const res = await saveFile(blob, kind === 'pdf' ? pdfName(job) : xlsxName(job))
+      if (res !== 'cancelled') flash(res === 'shared' ? 'Deljeno' : 'Datoteka prenesena')
+    } catch (e) { console.error(e); alert('Izvoz ni uspel.') }
+  }
   const project = st.projects.find((p) => p.id === st.currentId)
   const calcSettings = project ? project.snapshot : st.settings
 
@@ -48,7 +58,9 @@ export default function App() {
       <button className="btn" title="Prazen projekt: vse ure, grami, čas tiska in km na 0, 1 kos, brez datoteke. Nastavitve, materiali in tiskalniki ostanejo." onClick={() => { if (!hasUnsaved(st) || window.confirm('Trenutni projekt ni shranjen. Začnem nov prazen projekt in zavržem spremembe?')) { setSt(startBlank(st)); flash('Nov prazen projekt') } }}>Nov projekt</button>
       {project && <button className="btn" onClick={() => copy(project)}>Podvoji projekt</button>}
       <button className="btn" onClick={async () => flash((await copyText(jobText(st.current, calcSettings))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
-      <button className="btn" onClick={() => printQuote(st.current, calcSettings, project?.id ?? 'nova')}>PDF ponudba</button>
+      <button className="btn" onClick={() => doExport(st.current, calcSettings, project?.id ?? 'nova', 'pdf')}>Izvozi PDF</button>
+      <button className="btn" onClick={() => doExport(st.current, calcSettings, project?.id ?? 'nova', 'xlsx')}>Izvozi Excel</button>
+      <button className="btn" title="Natisni ali Shrani kot PDF v brskalniku" onClick={() => printQuote(st.current, calcSettings, project?.id ?? 'nova')}>Natisni</button>
       {project && <button className="btn" onClick={() => setSt({ ...st, projects: st.projects.map((p) => (p.id === project.id ? { ...p, snapshot: structuredClone(st.settings) } : p)) })}>Uporabi trenutni cenik</button>}
     </div>
   )
@@ -61,7 +73,7 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="font-bold text-lg"><span className="text-orange-400">HS</span> 3D <span className="font-normal text-slate-400 text-sm">Kalkulator</span></div>
           <nav className="order-3 sm:order-none w-full sm:w-auto flex gap-1 sm:ml-auto overflow-x-auto">
-            {tabs.map(([t, l]) => <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${tab === t ? 'bg-white/15 font-semibold' : 'text-slate-300'}`}>{l}</button>)}
+            {tabs.map(([t, l]) => <button key={t} onClick={() => setTab(t)} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${tab === t ? 'bg-white/15 font-semibold' : 'text-slate-300'}`}>{l}</button>)}
           </nav>
           <button aria-label="Svetli/temni način" className="ml-auto sm:ml-0 px-2 text-lg" onClick={() => setSt({ ...st, dark: !st.dark })}>{st.dark ? '☀️' : '🌙'}</button>
         </div>
@@ -74,7 +86,7 @@ export default function App() {
         </>)}
         {tab === 'projekti' && <ProjectsView projects={st.projects} currentId={st.currentId} onOpen={open} onCopy={copy}
           onDelete={(p) => setSt({ ...st, projects: st.projects.filter((x) => x.id !== p.id), currentId: st.currentId === p.id ? null : st.currentId })}
-          onPdf={(p) => printQuote(p.input, p.snapshot, p.id)}
+          onPdf={(p) => printQuote(p.input, p.snapshot, p.id)} onExport={(p, k) => doExport(p.input, p.snapshot, p.id, k)}
           onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual } : x)) })}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />}
         {tab === 'hitri' && <Quick settings={st.settings} flash={flash} onSave={({ input, snapshot }) => {
@@ -83,15 +95,22 @@ export default function App() {
         }} />}
         {tab === 'posel' && <Dashboard projects={st.projects} settings={st.settings} />}
         {tab === 'nastavitve' && (<>
-          <div className="card mb-4 flex flex-wrap gap-2 items-center">
-            <span className="font-semibold mr-auto">Varnostna kopija</span>
-            <button className="btn-p" onClick={() => exportJson(st)}>Izvozi JSON</button>
-            <label className="btn cursor-pointer">Uvozi JSON<input type="file" accept="application/json,.json" className="hidden" onChange={async (e) => {
-              const f = e.target.files?.[0]; if (!f) return
-              try { const s = await importJson(f); if (confirm(`Uvozim ${s.projects.length} projektov? Trenutni podatki bodo zamenjani.`)) { setSt(s); flash('Podatki obnovljeni') } } catch { alert('Datoteke ni mogoče prebrati.') }
-              e.target.value = ''
-            }} /></label>
+          <div className="card mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="font-semibold mr-auto">Varnostna kopija</span>
+              <button className="btn-p" onClick={() => exportJson(st)}>Izvozi kopijo</button>
+              <label className="btn cursor-pointer">Uvozi kopijo<input type="file" accept="application/json,.json" className="hidden" onChange={async (e) => {
+                const f = e.target.files?.[0]; if (!f) return
+                try {
+                  const inc = await importJson(f); const m = mergeStates(st, inc)
+                  if (confirm(`Združim kopijo? Novih projektov: ${m.added}, posodobljenih: ${m.updated}. Obstoječi projekti ostanejo.`)) { setSt(m.state); flash(`Uvoženo: ${m.added} novih, ${m.updated} posodobljenih`) }
+                } catch { alert('Datoteke ni mogoče prebrati.') }
+                e.target.value = ''
+              }} /></label>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Za prenos med telefonom in računalnikom: na eni napravi Izvozi kopijo (shrani v Google Drive), na drugi Uvozi kopijo. Projekti se združijo po ID, dvojnikov ni; cenik ostane lokalni.</p>
           </div>
+          <InstallHint />
           <SettingsView s={st.settings} onChange={(settings) => setSt({ ...st, settings })} />
         </>)}
       </main>

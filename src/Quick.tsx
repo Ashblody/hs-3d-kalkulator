@@ -17,9 +17,9 @@ export default function Quick({ settings, flash, onSave }: { settings: Settings;
     <div className="grid lg:grid-cols-2 gap-4">
       <div className="card grid grid-cols-2 gap-3 self-start">
         <NumField label="Ure tiskanja" value={q.printH} onChange={set('printH')} suffix="h" />
-        <NumField label="Material" value={q.grams} onChange={set('grams')} suffix="g" />
+        <NumField label="Teža materiala" value={q.grams} onChange={set('grams')} suffix="g" />
         <NumField label="Tvoje ure" value={q.workH} onChange={set('workH')} suffix="h" />
-        <NumField label="Material" value={q.matKg} onChange={set('matKg')} suffix="€/kg" />
+        <NumField label="Cena materiala" value={q.matKg} onChange={set('matKg')} suffix="€/kg" />
         <NumField label="Tiskanje" value={q.printRate} onChange={set('printRate')} suffix="€/h" />
         <NumField label="Delo" value={q.workRate} onChange={set('workRate')} suffix="€/h" />
         <label className="col-span-2 block"><span className="lbl">Dodaten pribitek: {q.markupPct} %</span>

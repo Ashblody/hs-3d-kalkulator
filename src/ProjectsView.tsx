@@ -6,12 +6,12 @@ import { calculate } from './calc'
 import { eur } from './format'
 
 export const statusLabels: Record<Status, string> = { ponudba: 'Ponudba', sprejeto: 'Sprejeto', natisnjeno: 'Natisnjeno', placano: 'Plačano' }
-export const statusColors: Record<Status, string> = { ponudba: 'bg-slate-200 text-slate-800', sprejeto: 'bg-sky-100 text-sky-800', natisnjeno: 'bg-amber-100 text-amber-800', placano: 'bg-emerald-100 text-emerald-800' }
+export const statusColors: Record<Status, string> = { ponudba: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100', sprejeto: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200', natisnjeno: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', placano: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200' }
 
-export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDelete, onStatus, onActual, onPdf }: {
+export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDelete, onStatus, onActual, onPdf, onExport }: {
   projects: Project[]; currentId: string | null
   onOpen: (p: Project) => void; onCopy: (p: Project) => void; onDelete: (p: Project) => void; onStatus: (p: Project, s: Status) => void
-  onActual: (p: Project, a: Actuals) => void; onPdf: (p: Project) => void
+  onActual: (p: Project, a: Actuals) => void; onPdf: (p: Project) => void; onExport: (p: Project, kind: 'pdf' | 'xlsx') => void
 }) {
   const [filter, setFilter] = useState<Status | 'vsi'>('vsi')
   if (!projects.length) return <div className="card text-slate-500">Ni shranjenih projektov.</div>
@@ -43,7 +43,9 @@ export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDe
               </select>
               <button className="btn-p" onClick={() => onOpen(p)}>Odpri</button>
               <button className="btn" onClick={() => onCopy(p)}>Podvoji projekt</button>
-              <button className="btn" onClick={() => onPdf(p)}>PDF ponudba</button>
+              <button className="btn" onClick={() => onExport(p, 'pdf')}>Izvozi PDF</button>
+              <button className="btn" onClick={() => onExport(p, 'xlsx')}>Izvozi Excel</button>
+              <button className="btn" title="Natisni ali Shrani kot PDF v brskalniku" onClick={() => onPdf(p)}>Natisni</button>
               <button className="btn" onClick={() => confirm('Izbrišem projekt?') && onDelete(p)}>Izbriši</button>
             </div>
             <details className="mt-3">
