@@ -160,7 +160,7 @@ describe('migracija cenika v3', () => {
 })
 
 describe('zaokroževanje, plošče, statusi, podvoji', () => {
-  it('privzeto navzgor na 5 €, prikaže razliko', () => {
+  it('privzeto navzgor na 1 €, prikaže razliko', () => {
     const r = calculate(demoJob(), defaultSettings())
     expect(r.net).toBe(320); expect(r2(r.rounding)).toBe(0.68); expect(r2(r.netBeforeRounding)).toBe(319.32)
     console.log('ROUND', JSON.stringify({ stl: calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, defaultSettings()).net, step: calculate({ ...demoJob(), fileSale: { kind: 'step' } }, defaultSettings()).net }))
@@ -199,15 +199,28 @@ describe('šefov model: referenčni posel 5 h, 800 g, 3,5 h dela', () => {
     const t = allTiers(ref(m), defaultSettings())
     console.log('REF', m, JSON.stringify(Object.fromEntries(Object.entries(t).map(([k, r]) => [k, { mat: r2(r.material), tisk: r2(r.printSale), stroski: r2(r.printCost), delo: r2(r.services), pred: r2(r.netBeforeRounding), cena: r2(r.net) }]))))
   })
-  it('PLA: na roke 105 €, z računom 205 €', () => {
+  it('PLA: na roke 102 €, z računom 203 €', () => {
     const t = allTiers(ref('bb2-pla'), defaultSettings())
-    expect(r2(t.naroke.netBeforeRounding)).toBe(101.09); expect(t.naroke.net).toBe(105); expect(t.racun.net).toBe(205)
-    expect(t.racun.net).toBe(Math.ceil(t.naroke.netBeforeRounding * 2 / 5) * 5); expect(t.domaci.services).toBe(0)
+    expect(r2(t.naroke.netBeforeRounding)).toBe(101.09); expect(t.naroke.net).toBe(102); expect(t.racun.net).toBe(203)
+    expect(t.racun.net).toBe(Math.ceil(t.naroke.netBeforeRounding * 2)); expect(t.domaci.services).toBe(0)
   })
   it('migracija: 36 → 20, lastna vrednost ostane', () => {
     const o = defaultSettings(); o.ratesVersion = 4; o.rates.labourHourly = 36
     expect(normalize({ settings: o, projects: [] }).settings.rates.labourHourly).toBe(20)
     const o2 = defaultSettings(); o2.ratesVersion = 4; o2.rates.labourHourly = 30
     expect(normalize({ settings: o2, projects: [] }).settings.rates.labourHourly).toBe(30)
+  })
+})
+
+describe('zaokroževanje 1 € privzeto', () => {
+  it('migracija 5 → 1, lastna 0 ostane', () => {
+    const o = defaultSettings(); o.ratesVersion = 5; o.rates.roundTo = 5
+    expect(normalize({ settings: o, projects: [] }).settings.rates.roundTo).toBe(1)
+    const o2 = defaultSettings(); o2.ratesVersion = 5; o2.rates.roundTo = 0
+    expect(normalize({ settings: o2, projects: [] }).settings.rates.roundTo).toBe(0)
+  })
+  it('izpis 20 h / 800 g PLA / 3,5 h', () => {
+    const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, defaultSettings())
+    console.log('R20', JSON.stringify(Object.fromEntries(Object.entries(t).map(([k, r]) => [k, { mat: r2(r.material), tisk: r2(r.printSale), stroski: r2(r.printCost), delo: r2(r.services), pred: r2(r.netBeforeRounding), cena: r2(r.net) }]))))
   })
 })

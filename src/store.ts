@@ -52,11 +52,13 @@ export function normalize(raw: unknown): AppState {
   }
   // v5: moja ura 36 → 20 (samo če je še stara privzeta)
   if ((r.settings.ratesVersion ?? 1) < 5 && r.settings.rates?.labourHourly === 36) storedRates.labourHourly = 20
+  // v6: zaokroževanje 5 → 1 € (samo če je še stara privzeta)
+  if ((r.settings.ratesVersion ?? 1) < 6 && r.settings.rates?.roundTo === 5) storedRates.roundTo = 1
   // v6: datoteke samo kot doplačilo k tisku – odstrani stare nastavitve
   for (const k of ['fileHandoverFee', 'repeatSalePct']) delete (storedRates as unknown as Record<string, unknown>)[k]
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 5, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
+    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 6, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
     projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, rates: { ...base.settings.rates, ...p.snapshot.rates } } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,
