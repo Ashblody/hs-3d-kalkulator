@@ -1,0 +1,39 @@
+import { useEffect, useState } from 'react'
+import type { Settings } from './types'
+import { copyText, quickCalc, quickCompare, quickDefaults, quickText, type QuickInput } from './quick'
+import { eur } from './format'
+import { Check, NumField, Row } from './ui'
+
+const KEY = 'hs3d-hitri'
+const load = (): QuickInput => { try { return { ...quickDefaults, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } } catch { return quickDefaults } }
+
+export default function Quick({ settings, flash }: { settings: Settings; flash: (m: string) => void }) {
+  const [q, setQ] = useState<QuickInput>(load)
+  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(q)) }, [q])
+  const set = (k: keyof QuickInput) => (v: number | boolean) => setQ({ ...q, [k]: v })
+  const r = quickCalc(q); const c = quickCompare(q, settings)
+  return (
+    <div className="grid lg:grid-cols-2 gap-4">
+      <div className="card grid grid-cols-2 gap-3 self-start">
+        <NumField label="Ure tiskanja" value={q.printH} onChange={set('printH')} suffix="h" />
+        <NumField label="Material" value={q.grams} onChange={set('grams')} suffix="g" />
+        <NumField label="Tvoje ure" value={q.workH} onChange={set('workH')} suffix="h" />
+        <NumField label="Material" value={q.matKg} onChange={set('matKg')} suffix="€/kg" />
+        <NumField label="Tiskanje" value={q.printRate} onChange={set('printRate')} suffix="€/h" />
+        <NumField label="Delo" value={q.workRate} onChange={set('workRate')} suffix="€/h" />
+        <label className="col-span-2 block"><span className="lbl">Dodaten pribitek: {q.markupPct} %</span>
+          <input type="range" min={0} max={100} step={1} className="w-full h-8 accent-orange-500" value={q.markupPct} onChange={(e) => set('markupPct')(Number(e.target.value))} /></label>
+        <div className="col-span-2"><Check label="Prikaži višji cenik (2×) za poslovne stranke" checked={q.business} onChange={set('business')} /></div>
+      </div>
+      <div className="space-y-4 self-start">
+        <div className="card">
+          <Row l="Tiskanje" v={eur(r.print)} /><Row l="Material" v={eur(r.material)} /><Row l="Delo" v={eur(r.work)} /><Row l="Pribitek" v={eur(r.markup)} />
+          <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-bold">KONČNA CENA</span><span className="text-3xl font-black tabular-nums" data-testid="quick-total">{eur(r.total)}</span></div>
+          {q.business && <div className="flex justify-between items-baseline"><span className="font-semibold">Poslovne stranke (2×)</span><span className="text-2xl font-black tabular-nums text-emerald-600" data-testid="quick-business">{eur(r.business)}</span></div>}
+          <button className="btn-p w-full mt-3" onClick={async () => flash((await copyText(quickText(q))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
+        </div>
+        <div className="card text-sm text-slate-600 dark:text-slate-300">Podrobni kalkulator (Na roke, PLA, z elektriko in obrabo, zaokroženo): <b>{eur(c.detailed)}</b> · razlika {c.diff >= 0 ? '+' : ''}{eur(c.diff)}</div>
+      </div>
+    </div>
+  )
+}

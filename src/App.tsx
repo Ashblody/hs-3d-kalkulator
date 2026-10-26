@@ -6,10 +6,12 @@ import { duplicateProject, hasUnsaved, newProject, startBlank, usePersistentStat
 import type { JobInput, Project, Settings } from './types'
 import Dashboard from './Dashboard'
 import Quote from './Quote'
+import Quick from './Quick'
+import { copyText, jobText } from './quick'
 import { exportJson, importJson } from './backup'
 
-type Tab = 'kalk' | 'projekti' | 'posel' | 'nastavitve'
-const tabs: [Tab, string][] = [['kalk', 'Kalkulator'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
+type Tab = 'kalk' | 'hitri' | 'projekti' | 'posel' | 'nastavitve'
+const tabs: [Tab, string][] = [['kalk', 'Kalkulator'], ['hitri', 'Hitri izračun'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
 
 export default function App() {
   const [st, setSt] = usePersistentState()
@@ -45,6 +47,7 @@ export default function App() {
       <button className="btn-p" onClick={save}>{project ? 'Shrani projekt' : 'Shrani kot nov projekt'}</button>
       <button className="btn" title="Prazen projekt: vse ure, grami, čas tiska in km na 0, 1 kos, brez datoteke. Nastavitve, materiali in tiskalniki ostanejo." onClick={() => { if (!hasUnsaved(st) || window.confirm('Trenutni projekt ni shranjen. Začnem nov prazen projekt in zavržem spremembe?')) { setSt(startBlank(st)); flash('Nov prazen projekt') } }}>Nov projekt</button>
       {project && <button className="btn" onClick={() => copy(project)}>Podvoji projekt</button>}
+      <button className="btn" onClick={async () => flash((await copyText(jobText(st.current, calcSettings))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
       <button className="btn" onClick={() => printQuote(st.current, calcSettings, project?.id ?? 'nova')}>PDF ponudba</button>
       {project && <button className="btn" onClick={() => setSt({ ...st, projects: st.projects.map((p) => (p.id === project.id ? { ...p, snapshot: structuredClone(st.settings) } : p)) })}>Uporabi trenutni cenik</button>}
     </div>
@@ -74,6 +77,7 @@ export default function App() {
           onPdf={(p) => printQuote(p.input, p.snapshot, p.id)}
           onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual } : x)) })}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />}
+        {tab === 'hitri' && <Quick settings={st.settings} flash={flash} />}
         {tab === 'posel' && <Dashboard projects={st.projects} settings={st.settings} />}
         {tab === 'nastavitve' && (<>
           <div className="card mb-4 flex flex-wrap gap-2 items-center">
