@@ -67,7 +67,7 @@ export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, mar
 export const rates: Rates = {
   scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
   markupPct: 100, reservePct: 10, friendDiscountPct: 15, friendPrintHourly: 1, fileAddonStl: 15, roundTo: 5, fileAddonStep: 30,
-  printHourly: 3.5, labourHourly: 36, invoiceMultiplier: 2, familyLabourPct: 0,
+  printHourly: 3.5, labourHourly: 20, invoiceMultiplier: 2, familyLabourPct: 0,
 }
 
 export const business: Business = {
@@ -75,7 +75,7 @@ export const business: Business = {
   taxPct: 0, vatEnabled: false, vatPct: 22,
 }
 
-export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 4, rates, business })
+export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 5, rates, business })
 
 export const digitalLabels: Record<DigitalKind, string> = {
   raw: 'Surov 3D-sken (OBJ/STL)',
