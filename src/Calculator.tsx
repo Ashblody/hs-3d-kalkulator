@@ -3,6 +3,7 @@ import { allTiers, TIERS, calculate, fileSaleInfo, pricePerKg, validateJob, wear
 import { eur, num } from './format'
 import { Big, Check, NumField, Row, Section, Select, TextField } from './ui'
 import { PriceVsCost, StructurePie } from './Charts'
+import { quickCalc, quickDefaults } from './quick'
 
 const modes: [Mode, string, string][] = [['osebno', 'Osebno', 'na roke'], ['poslovno', 'Poslovno', 'z računom']]
 const types: [OrderType, string][] = [['tisk', 'Samo tisk'], ['sken', 'Skeniranje'], ['cad', 'CAD'], ['kombinirano', 'Kombinirano'], ['digitalno', 'Digitalna datoteka']]
@@ -80,11 +81,11 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
         )}
 
         <Section title="Moje delo (ure, 0 = ne obračunam)" open={job.orderType !== 'tisk'}>
-          <NumField label={`Skeniranje na terenu (${num(settings.rates.labourHourly)} €/h)`} value={job.scanH} onChange={set('scanH')} suffix="h" />
+          <NumField label={`Skeniranje (${num(settings.rates.labourHourly)} €/h)`} value={job.scanH} onChange={set('scanH')} suffix="h" />
           <NumField label={`Urejanje skena (${num(settings.rates.labourHourly)} €/h)`} value={job.editH} onChange={set('editH')} suffix="h" />
-          <NumField label={`CAD-modeliranje (${num(settings.rates.labourHourly)} €/h)`} value={job.cadH} onChange={set('cadH')} suffix="h" />
+          <NumField label={`Modeliranje iz skena / CAD (${num(settings.rates.labourHourly)} €/h)`} value={job.cadH} onChange={set('cadH')} suffix="h" />
           <NumField label={`Reverse engineering (${num(settings.rates.labourHourly)} €/h)`} value={job.reverseH} onChange={set('reverseH')} suffix="h" />
-          <NumField label={`Priprava tiska (${num(settings.rates.labourHourly)} €/h)`} value={job.prepH} onChange={set('prepH')} suffix="h" />
+          <NumField label={`Slicer / priprava tiska (${num(settings.rates.labourHourly)} €/h)`} value={job.prepH} onChange={set('prepH')} suffix="h" />
           <NumField label={`Dodelava / podpore (${num(settings.rates.labourHourly)} €/h)`} value={job.finishH} onChange={set('finishH')} suffix="h" />
           <NumField label="Dodatno delo" value={job.extraWorkH} onChange={set('extraWorkH')} suffix="h" />
           <NumField label="Dodatno delo – cena" value={job.extraWorkRate} onChange={set('extraWorkRate')} suffix="€/h" />
@@ -122,6 +123,12 @@ export default function Calculator({ job, settings, onChange, actions }: { job: 
             </button>)) })()}</div>
           <div className="mt-2 flex justify-between text-sm text-slate-600 dark:text-slate-300"><span>Moj strošek (material, elektrika, obraba, rezerva)</span><b className="tabular-nums">{eur(r.realCosts)}</b></div>
         </div>
+        {(() => { const q = quickCalc({ ...quickDefaults, printH: r.printHours, grams: r.kg * 1000, workH: r.laborHours, matKg: mat ? pricePerKg(mat) : 20, printRate: settings.rates.printHourly, workRate: settings.rates.labourHourly, business: job.mode === 'poslovno' })
+          const hv = job.mode === 'poslovno' ? q.business : q.total, d = r.gross - hv
+          return <div className="card text-sm" data-testid="primerjava"><div className="h2">Primerjava Hitri ↔ Podroben</div>
+            <div className="grid grid-cols-2 gap-2"><div className="rounded-xl p-3 bg-slate-50 dark:bg-slate-800/60 ring-1 ring-slate-200 dark:ring-slate-700/60"><div className="text-xs text-slate-500 dark:text-slate-400">Hitri</div><div className="text-xl font-bold tabular-nums">{eur(hv)}</div></div>
+            <div className="rounded-xl p-3 bg-slate-50 dark:bg-slate-800/60 ring-1 ring-slate-200 dark:ring-slate-700/60"><div className="text-xs text-slate-500 dark:text-slate-400">Podroben</div><div className="text-xl font-bold tabular-nums">{eur(r.gross)}</div></div></div>
+            <div className="mt-2 text-slate-600 dark:text-slate-300">Razlika {d >= 0 ? '+' : ''}{eur(d)} (Podroben upošteva še potrošni material{r.digital ? ', datoteko' : ''}{r.transport ? ', prevoz' : ''} in zaokroževanje).</div></div> })()}
         {errors.length > 0 && <div className="card !ring-red-400 text-sm text-red-600">{errors.map((e) => <div key={e}>{e}</div>)}</div>}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2"><Big label={`Končna cena – ${job.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}`} tone="green" value={eur(r.gross)} sub={settings.business.vatEnabled ? `brez DDV ${eur(r.net)} · DDV ${eur(r.vat)}` : 'DDV ni obračunan (mali davčni zavezanec)'} /></div>

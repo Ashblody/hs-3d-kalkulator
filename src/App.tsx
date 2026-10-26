@@ -11,11 +11,11 @@ import { copyText, jobText } from './quick'
 import { exportJson, importJson } from './backup'
 
 type Tab = 'kalk' | 'hitri' | 'projekti' | 'posel' | 'nastavitve'
-const tabs: [Tab, string][] = [['kalk', 'Kalkulator'], ['hitri', 'Hitri izračun'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
+const tabs: [Tab, string][] = [['hitri', 'Hitri'], ['kalk', 'Podroben'], ['projekti', 'Projekti'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
 
 export default function App() {
   const [st, setSt] = usePersistentState()
-  const [tab, setTab] = useState<Tab>('kalk')
+  const [tab, setTab] = useState<Tab>('hitri')
   const [msg, setMsg] = useState('')
   const [quote, setQuote] = useState<{ job: JobInput; settings: Settings; number: string } | null>(null)
   const printQuote = (job: JobInput, settings: Settings, id: string) => {

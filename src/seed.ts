@@ -97,7 +97,7 @@ const emptyDigital = (r: Rates): JobInput['digital'] => ({
 
 export const emptyJob = (r: Rates = rates): JobInput => ({
   name: 'Nov projekt', client: '', date: new Date().toISOString().slice(0, 10), description: '',
-  mode: 'poslovno', orderType: 'tisk', printerId: 'x2d', materialId: 'bambu-pla',
+  mode: 'osebno', orderType: 'tisk', printerId: 'x2d', materialId: 'bambu-pla',
   pieces: 1, gramsPerPiece: 0, hoursPerPiece: 0, minutesPerPiece: 0,
   useBatchTime: false, usePlates: false, plates: [], batchHours: 0, batchMinutes: 0, extraMaterialG: 0,
   consumables: 0, otherDirect: 0, reservePct: r.reservePct, markupPct: r.markupPct, printCostOverride: null,
@@ -114,7 +114,7 @@ export const blankJob = (r: Rates = rates): JobInput => ({ ...emptyJob(r), name:
 export const demoJob = (): JobInput => ({
   ...emptyJob(),
   name: 'Nosilci lučk – 2 leva + 2 desna',
-  client: 'Demo',
+  client: 'Demo', mode: 'poslovno',
   date: '2026-10-25',
   description: 'Sken s Creality Pika, urejanje skena, CAD, tisk v ASA.',
   orderType: 'kombinirano',
