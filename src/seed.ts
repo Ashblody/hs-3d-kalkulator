@@ -67,7 +67,7 @@ export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, mar
 export const rates: Rates = {
   scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
   markupPct: 100, reservePct: 10, friendDiscountPct: 15, fileAddonStl: 15, roundTo: 1, fileAddonStep: 30,
-  printHourly: 3.5, labourHourly: 20, invoiceMultiplier: 2,
+  printHourly: 3.5, labourHourly: 20, invoiceMultiplier: 2, adhesiveDefault: 0.5,
 }
 
 export const business: Business = {
@@ -75,7 +75,10 @@ export const business: Business = {
   taxPct: 0, vatEnabled: false, vatPct: 22,
 }
 
-export const defaultSettings = (): Settings => structuredClone({ printers, materials: [...materials, ...materialsV2], materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 7, rates, business })
+/** materiali, ki potrebujejo lepilo na podlago */
+export const needsAdhesive = (type: string) => /ASA|ABS|PC(?!TG)|PA|NYLON|NAJLON|CF/i.test(type)
+export const withAdhesive = (ms: Material[], def: number) => ms.map((m) => (m.adhesive === undefined ? { ...m, adhesive: needsAdhesive(m.type) ? def : 0 } : m))
+export const defaultSettings = (): Settings => structuredClone({ printers, materials: withAdhesive([...materials, ...materialsV2], rates.adhesiveDefault), materialSeeds: [...materials, ...materialsV2].map((m) => m.id), ratesVersion: 9, rates, business })
 
 export const digitalLabels: Record<DigitalKind, string> = {
   raw: 'Surov 3D-sken (OBJ/STL)',
@@ -117,9 +120,8 @@ export const demoJob = (): JobInput => ({
   client: 'Demo', mode: 'poslovno',
   date: '2026-10-25',
   description: 'Sken s Creality Pika, urejanje skena, CAD, tisk v ASA.',
-  orderType: 'kombinirano',
   printerId: 'x2d', materialId: 'bambu-asa',
   pieces: 4, gramsPerPiece: 192, hoursPerPiece: 4, minutesPerPiece: 42,
-  consumables: 3.4, reservePct: 10, markupPct: 100,
-  scanH: 1, editH: 1, cadH: 0.75, prepH: 0.25, finishH: 0.5, km: 0,
+  consumables: 2.9, reservePct: 10, markupPct: 100,
+  scanH: 1, editH: 1, cadH: 0.75, prepH: 0.75, km: 0,
 })

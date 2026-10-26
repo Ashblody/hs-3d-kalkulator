@@ -1,4 +1,4 @@
-import type { JobInput, Mode, OrderType, Settings } from './types'
+import type { JobInput, Mode, Settings } from './types'
 import { allTiers, TIERS, calculate, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
 import { eur, num } from './format'
 import { Big, Check, NumField, Row, Section, Select, TextField } from './ui'
@@ -6,7 +6,6 @@ import { PriceVsCost, StructurePie } from './Charts'
 import { quickCalc, quickDefaults } from './quick'
 
 const modes: [Mode, string, string][] = [['osebno', 'Osebno', 'na roke'], ['poslovno', 'Poslovno', 'z računom']]
-const types: [OrderType, string][] = [['tisk', 'Samo tisk'], ['sken', 'Skeniranje'], ['cad', 'CAD'], ['kombinirano', 'Kombinirano'], ['digitalno', 'Digitalna datoteka']]
 
 export default function Calculator({ job, settings, onChange, actions, customerSlot }: { job: JobInput; settings: Settings; onChange: (j: JobInput) => void; actions?: React.ReactNode; customerSlot?: React.ReactNode }) {
   const set = <K extends keyof JobInput>(k: K) => (v: JobInput[K]) => onChange({ ...job, [k]: v })
@@ -31,7 +30,6 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             {customerSlot}
             <TextField label="Stranka" value={job.client} onChange={set('client')} />
             <TextField label="Datum" type="date" value={job.date} onChange={set('date')} />
-            <Select label="Vrsta naročila" value={job.orderType} onChange={set('orderType')} options={types} />
             {job.rateOverride && <div className="col-span-2 sm:col-span-3 text-xs text-sky-600 dark:text-sky-300">Cenik stranke: tisk {num(settings.rates.printHourly)} €/h · delo {num(settings.rates.labourHourly)} €/h <button className="underline ml-1" onClick={() => onChange({ ...job, rateOverride: undefined })}>ponastavi</button></div>}
             <div className="col-span-2"><TextField label="Opis" value={job.description} onChange={set('description')} /></div>
           </div>
@@ -71,26 +69,23 @@ export default function Calculator({ job, settings, onChange, actions, customerS
               <NumField label="Čas kosa – minute" value={job.minutesPerPiece} onChange={set('minutesPerPiece')} suffix="min" />
             </>)}
             </>)}
-            <NumField label="Dodatna poraba (podpore, purge, AMS)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />
-            <NumField label="Potrošni material (lepilo …)" value={job.consumables} onChange={set('consumables')} suffix="€" />
+            {job.extraMaterialG > 0 && <NumField label="Dodatna poraba (stari vnos)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />}
+            <NumField label="Potrošni material (drugo)" value={job.consumables} onChange={set('consumables')} suffix="€" />
             <NumField label="Rezerva za neuspele tiske" value={job.reservePct} onChange={set('reservePct')} suffix="%" />
             <div className="col-span-2 sm:col-span-3 text-xs text-slate-500 dark:text-slate-400">
-              Čas skupaj {num(r.printHours)} h · filament {num(r.kg * 1000)} g · moč {num(r.powerW)} W{printer && !r.powerW ? ' (vnesi moč v Nastavitvah)' : ''} · amortizacija {printer ? num(wearPerHour(printer)) : 0} €/h
+              {r.adhesive > 0 && <span className="text-sky-600 dark:text-sky-300">Lepilo ({r.adhesiveLabel}) {eur(r.adhesive)} se doda samodejno · </span>}
+              Teža iz slicerja (skupaj s podporami in purge) · čas skupaj {num(r.printHours)} h · filament {num(r.kg * 1000)} g · moč {num(r.powerW)} W{printer && !r.powerW ? ' (vnesi moč v Nastavitvah)' : ''} · amortizacija {printer ? num(wearPerHour(printer)) : 0} €/h
               {` · tisk ${num(settings.rates.printHourly)} €/h tiskalnika + material po strošku`}
               {mat && printer && powerFor(printer, mat.type) === 0 && <span className="text-orange-600"> · Za {mat.type} na tem tiskalniku moč ni vnesena.</span>}
             </div>
           </Section>
         )}
 
-        <Section title="Moje delo (ure, 0 = ne obračunam)" open={job.orderType !== 'tisk'}>
-          <NumField label={`Skeniranje (${num(settings.rates.labourHourly)} €/h)`} value={job.scanH} onChange={set('scanH')} suffix="h" />
-          <NumField label={`Urejanje skena (${num(settings.rates.labourHourly)} €/h)`} value={job.editH} onChange={set('editH')} suffix="h" />
-          <NumField label={`Modeliranje iz skena / CAD (${num(settings.rates.labourHourly)} €/h)`} value={job.cadH} onChange={set('cadH')} suffix="h" />
-          <NumField label={`Reverse engineering (${num(settings.rates.labourHourly)} €/h)`} value={job.reverseH} onChange={set('reverseH')} suffix="h" />
-          <NumField label={`Slicer / priprava tiska (${num(settings.rates.labourHourly)} €/h)`} value={job.prepH} onChange={set('prepH')} suffix="h" />
-          <NumField label={`Dodelava / podpore (${num(settings.rates.labourHourly)} €/h)`} value={job.finishH} onChange={set('finishH')} suffix="h" />
-          <NumField label="Dodatno delo" value={job.extraWorkH} onChange={set('extraWorkH')} suffix="h" />
-          <NumField label="Dodatno delo – cena" value={job.extraWorkRate} onChange={set('extraWorkRate')} suffix="€/h" />
+        <Section title={`Moje delo (${num(settings.rates.labourHourly)} €/h, 0 = ne obračunam)`}>
+          <NumField label="Skeniranje" value={job.scanH} onChange={set('scanH')} suffix="h" />
+          <NumField label="Urejanje skena" value={job.editH} onChange={set('editH')} suffix="h" />
+          <NumField label="Modeliranje / CAD / reverse engineering" value={job.cadH} onChange={set('cadH')} suffix="h" />
+          <NumField label="Slicer, priprava in dodelava" value={job.prepH} onChange={set('prepH')} suffix="h" />
         </Section>
 
         <details className="card" open={showDigital}>
@@ -102,13 +97,12 @@ export default function Calculator({ job, settings, onChange, actions, customerS
 
         <Section title="Ostalo" open={false}>
           <NumField label={`Prevoz (${num(settings.rates.km)} €/km)`} value={job.km} onChange={set('km')} suffix="km" />
-          <NumField label="Pakiranje" value={job.packaging} onChange={set('packaging')} suffix="€" />
-          <NumField label="Dostava" value={job.delivery} onChange={set('delivery')} suffix="€" />
-          <NumField label="Ostali stroški" value={job.otherCosts} onChange={set('otherCosts')} suffix="€" />
-          <NumField label="Ostali neposredni stroški tiska" value={job.otherDirect} onChange={set('otherDirect')} suffix="€" />
+          <NumField label="Ostali stroški (pakiranje, dostava …)" value={job.otherCosts} onChange={set('otherCosts')} suffix="€" />
           <NumField label="Popust" value={job.discount} onChange={set('discount')} suffix="€" />
+          <NumField label="Drugo delo (po drugi ceni)" value={job.extraWorkH} onChange={set('extraWorkH')} suffix="h" />
+          {job.extraWorkH > 0 && <NumField label="Drugo delo – cena" value={job.extraWorkRate} onChange={set('extraWorkRate')} suffix="€/h" />}
           <div className="col-span-2 sm:col-span-3">
-            <Check label="Ročno določim stroške tiska" checked={job.printCostOverride !== null} onChange={(v) => set('printCostOverride')(v ? Math.round(r.printCost * 100) / 100 : null)} />
+            <Check label="Ročno določim strošek materiala (namesto izračuna)" checked={job.printCostOverride !== null} onChange={(v) => set('printCostOverride')(v ? Math.round(r.printCost * 100) / 100 : null)} />
             {job.printCostOverride !== null && <NumField label="Stroški tiska (ročno)" value={job.printCostOverride} onChange={(v) => set('printCostOverride')(v)} suffix="€" />}
           </div>
         </Section>
@@ -130,7 +124,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           return <div className="card text-sm" data-testid="primerjava"><div className="h2">Primerjava Hitri ↔ Podroben</div>
             <div className="grid grid-cols-2 gap-2"><div className="rounded-xl p-3 bg-slate-50 dark:bg-slate-800/60 ring-1 ring-slate-200 dark:ring-slate-700/60"><div className="text-xs text-slate-500 dark:text-slate-400">Hitri</div><div className="text-xl font-bold tabular-nums">{eur(hv)}</div></div>
             <div className="rounded-xl p-3 bg-slate-50 dark:bg-slate-800/60 ring-1 ring-slate-200 dark:ring-slate-700/60"><div className="text-xs text-slate-500 dark:text-slate-400">Podroben</div><div className="text-xl font-bold tabular-nums">{eur(r.gross)}</div></div></div>
-            <div className="mt-2 text-slate-600 dark:text-slate-300">Razlika {d >= 0 ? '+' : ''}{eur(d)} (Podroben upošteva še potrošni material{r.digital ? ', datoteko' : ''}{r.transport ? ', prevoz' : ''} in zaokroževanje).</div></div> })()}
+            <div className="mt-2 text-slate-600 dark:text-slate-300">Razlika {d >= 0 ? '+' : ''}{eur(d)} (Podroben upošteva še lepilo/potrošni material{r.digital ? ', datoteko' : ''}{r.transport ? ', prevoz' : ''} in zaokroževanje).</div></div> })()}
         {errors.length > 0 && <div className="card !ring-red-400 text-sm text-red-600">{errors.map((e) => <div key={e}>{e}</div>)}</div>}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2"><Big label={`Končna cena – ${job.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}`} tone="green" value={eur(r.gross)} sub={settings.business.vatEnabled ? `brez DDV ${eur(r.net)} · DDV ${eur(r.vat)}` : 'DDV ni obračunan (mali davčni zavezanec)'} /></div>
@@ -148,6 +142,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <Row l={`Tisk ${num(r.printHours)} h × ${num(settings.rates.printHourly)} €/h`} v={eur(r.printOverridden ? r.printSale - (job.printCostOverride ?? 0) : r.printHours * settings.rates.printHourly)} />
           {r.printOverridden ? <Row l="Material (ročno)" v={eur(job.printCostOverride ?? 0)} /> : <>
           <Row l={`Material ${num(r.kg * 1000)} g`} v={eur(r.material)} />
+          {r.adhesive > 0 && <Row l={`Lepilo (${r.adhesiveLabel})`} v={eur(r.adhesive)} />}
           {r.consumables + r.otherDirect > 0 && <Row l="Potrošni material" v={eur(r.consumables + r.otherDirect)} />}</>}
           <Row l={`Moje delo ${num(r.laborHours)} h × ${num(settings.rates.labourHourly)} €/h`} v={eur(r.servicesStandard)} />
           {r.digital > 0 && <Row l={`Datoteka ${job.fileSale.kind.toUpperCase()}`} v={eur(r.digital)} />}
@@ -166,6 +161,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <Row l={`Material ${num(r.kg * 1000)} g`} v={eur(r.material)} />
           <Row l="Elektrika" v={eur(r.electricity)} />
           <Row l="Obraba tiskalnika" v={eur(r.wear)} />
+          {r.adhesive > 0 && <Row l={`Lepilo (${r.adhesiveLabel})`} v={eur(r.adhesive)} />}
           <Row l="Potrošni material" v={eur(r.consumables + r.otherDirect)} />
           <Row l={`Rezerva ${num(job.reservePct)} %`} v={eur(r.reserve)} /></>}
           {r.realCosts - r.printCost > 0.004 && <Row l="Prevoz, pakiranje, dostava, ostalo" v={eur(r.realCosts - r.printCost)} />}

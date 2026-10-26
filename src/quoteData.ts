@@ -13,17 +13,16 @@ export function quoteData(job: JobInput, settings0: Settings, customer?: Custome
   if (r.printSale > 0) lines.push([`3D-tisk – ${job.pieces} kos, ${mat?.name ?? ''}`, `${num(r.printHours)} h tiska`, r.printSale * disc])
   const sv: [string, number, number][] = [
     ['3D-skeniranje', job.scanH, settings.rates.labourHourly], ['Urejanje skena', job.editH, settings.rates.labourHourly],
-    ['CAD-modeliranje', job.cadH, settings.rates.labourHourly], ['Reverse engineering', job.reverseH, settings.rates.labourHourly],
-    ['Priprava tiska', job.prepH, settings.rates.labourHourly], ['Dodelava', job.finishH, settings.rates.labourHourly],
-    ['Dodatno delo', job.extraWorkH, job.extraWorkRate],
+    ['Modeliranje / CAD / reverse engineering', (job.cadH || 0) + (job.reverseH || 0), settings.rates.labourHourly],
+    ['Priprava tiska in dodelava', (job.prepH || 0) + (job.finishH || 0), settings.rates.labourHourly],
+    ['Drugo delo', job.extraWorkH, job.extraWorkRate],
   ]
   const fs = fileSaleInfo(job, settings)
   for (const [l, h, rate] of sv) if (h > 0) lines.push([l, `${num(h)} h × ${eur(rate * disc)}`, h * rate * disc])
   if (job.fileSale?.kind && job.fileSale.kind !== 'none') lines.push([job.fileSale.kind === 'stl' ? 'Datoteka STL (urejen sken)' : 'Datoteka STEP (parametrični CAD)', 'zraven tiska', fs.price * disc])
   if (r.transport > 0) lines.push(['Prevoz', `${num(job.km)} km`, r.transport * disc])
-  if (r.packaging > 0) lines.push(['Pakiranje', '', r.packaging * disc])
-  if (r.delivery > 0) lines.push(['Dostava', '', r.delivery * disc])
-  if (r.otherCosts > 0) lines.push(['Ostalo', '', r.otherCosts * disc])
+  const oth = r.packaging + r.delivery + r.otherCosts
+  if (oth > 0) lines.push(['Ostali stroški', '', oth * disc])
   if (r.discount > 0) lines.push(['Popust', '', -r.discount])
   const totals: [string, number][] = []
   if (r.minOrderApplied) totals.push(['Minimalno naročilo', settings.rates.minOrder])

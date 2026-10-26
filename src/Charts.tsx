@@ -7,7 +7,7 @@ const COLORS = ['#0ea5e9', '#eab308', '#a855f7', '#64748b', '#f97316', '#22c55e'
 export function StructurePie({ r }: { r: Result }) {
   const data = [
     ['Material', r.material], ['Elektrika', r.electricity], ['Amortizacija', r.wear],
-    ['Potrošni material', r.consumables + r.otherDirect], ['Rezerva', r.reserve],
+    ['Lepilo', r.adhesive], ['Potrošni material', r.consumables + r.otherDirect], ['Rezerva', r.reserve],
     ['Aktivno delo', r.services + r.digital], ['Pribitek', r.markup],
     ['Prevoz in ostalo', r.transport + r.packaging + r.delivery + r.otherCosts],
   ].map(([name, value]) => ({ name: name as string, value: Math.max(0, Math.round((value as number) * 100) / 100) })).filter((d) => d.value > 0)

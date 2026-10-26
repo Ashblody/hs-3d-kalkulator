@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Customer, JobInput, Project, Settings, Status } from './types'
-import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, blankJob, ratesV1, rates as ratesNow } from './seed'
+import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, blankJob, ratesV1, withAdhesive, rates as ratesNow } from './seed'
 import { uid } from './format'
 
 export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; deleted?: string[]; current: JobInput; currentId: string | null; dark: boolean }
@@ -48,12 +48,27 @@ const stripOld = (j: JobInput): JobInput => {
   return j
 }
 
+/** v9: združene vrstice dela, dodatna poraba v teži, pakiranje/dostava v ostalo, neposredni v potrošni */
+export const mergeLegacy = (j: JobInput): JobInput => {
+  const o = { ...j }
+  o.cadH = (+o.cadH || 0) + (+o.reverseH || 0); o.reverseH = 0
+  o.prepH = (+o.prepH || 0) + (+o.finishH || 0); o.finishH = 0
+  o.otherCosts = (+o.otherCosts || 0) + (+o.packaging || 0) + (+o.delivery || 0); o.packaging = 0; o.delivery = 0
+  o.consumables = (+o.consumables || 0) + (+o.otherDirect || 0); o.otherDirect = 0
+  const x = +o.extraMaterialG || 0
+  if (x > 0) {
+    if (o.usePlates) { const i = o.plates.findIndex((p) => p.materialId === o.materialId); if (i >= 0) { o.plates = o.plates.map((p, k) => (k === i ? { ...p, grams: p.grams + x } : p)); o.extraMaterialG = 0 } }
+    else if (o.pieces > 0) { o.gramsPerPiece = o.gramsPerPiece + x / o.pieces; o.extraMaterialG = 0 }
+  }
+  return o
+}
+
 /** dopolni manjkajoča polja (npr. po uvozu starejše kopije) */
 export function normalize(raw: unknown): AppState {
   const base = initialState()
   const r = raw as Partial<AppState>
   if (!r || typeof r !== 'object' || !r.settings) throw new Error('Neveljavna datoteka')
-  const fixJob = (j: Partial<JobInput>): JobInput => stripOld({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { kind: j?.fileSale?.kind ?? 'none' }, mode: migrateMode(j), plates: Array.isArray(j?.plates) ? j.plates : [], usePlates: !!j?.usePlates, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } } as JobInput)
+  const fixJob = (j: Partial<JobInput>): JobInput => mergeLegacy(stripOld({ ...emptyJob(), ...j, digital: { ...emptyJob().digital, ...(j?.digital ?? {}) }, fileSale: { kind: j?.fileSale?.kind ?? 'none' }, mode: migrateMode(j), plates: Array.isArray(j?.plates) ? j.plates : [], usePlates: !!j?.usePlates, rights: { ...emptyJob().rights, ...(j?.rights ?? {}) } } as JobInput))
   // migracija: dodaj nove privzete materiale, ne prepiši urejenih in ne vrni izbrisanih
   const seen = new Set(r.settings.materialSeeds ?? materialsV1Ids)
   const have = new Set((r.settings.materials ?? []).map((m) => m.id))
@@ -75,8 +90,8 @@ export function normalize(raw: unknown): AppState {
   for (const k of ['fileHandoverFee', 'repeatSalePct', ...OLD_RATES]) delete (storedRates as unknown as Record<string, unknown>)[k]
   return {
     version: 1,
-    settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 8, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
-    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, rates: dropOldRates({ ...base.settings.rates, ...p.snapshot.rates, ...(migrateRound && p.snapshot.rates?.roundTo === 5 ? { roundTo: storedRates.roundTo } : {}) }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
+    settings: { ...base.settings, ...r.settings, materials: withAdhesive(materials, storedRates.adhesiveDefault), materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 9, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
+    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, materials: (p.snapshot.materials ?? []).map((m) => (m.adhesive === undefined ? { ...m, adhesive: 0 } : m)), rates: dropOldRates({ ...base.settings.rates, ...p.snapshot.rates, ...(migrateRound && p.snapshot.rates?.roundTo === 5 ? { roundTo: storedRates.roundTo } : {}) }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     deleted: Array.isArray(r.deleted) ? r.deleted.filter((x) => typeof x === 'string') : [],
     customers: Array.isArray(r.customers) ? r.customers.filter((c) => c && c.id && c.name) : [],
     current: fixJob(r.current ?? emptyJob()),

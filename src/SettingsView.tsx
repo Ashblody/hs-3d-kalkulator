@@ -21,6 +21,8 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
           <NumField label="Poslovno (z računom): faktor" value={s.rates.invoiceMultiplier} onChange={setR('invoiceMultiplier')} suffix="×" />
           <NumField label="Prevoz" value={s.rates.km} onChange={setR('km')} suffix="€/km" />
           <NumField label="Minimalno naročilo" value={s.rates.minOrder} onChange={setR('minOrder')} suffix="€" />
+          <NumField label="Cena elektrike" value={s.business.kwhPrice} onChange={setB('kwhPrice')} suffix="€/kWh" />
+          <NumField label="Privzeto lepilo (ASA/ABS/PC/najlon/CF)" value={s.rates.adhesiveDefault ?? 0.5} onChange={setR('adhesiveDefault')} suffix="€/tisk" />
           <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
           <label className="block"><span className="lbl">Zaokroževanje končne cene navzgor (Hitri in Podroben)</span>
             <select className="inp" value={s.rates.roundTo} onChange={(e) => setR('roundTo')(Number(e.target.value))}><option value={0}>Brez</option><option value={1}>1 €</option><option value={5}>5 €</option></select></label>
@@ -29,13 +31,12 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
         </div>
       </details>
 
-      <details className="card" open>
-        <summary className="cursor-pointer font-semibold">Poslovne nastavitve in davki</summary>
+      <details className="card">
+        <summary className="cursor-pointer font-semibold">Napredno – s.p., davki, mesečni pregled</summary>
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <NumField label="Ciljna osebna postavka" value={s.business.targetHourly} onChange={setB('targetHourly')} suffix="€/h" />
           <NumField label="Obračunljive ure na mesec" value={s.business.billableHours} onChange={setB('billableHours')} suffix="h" />
           <NumField label="Prispevki in administracija" value={s.business.monthlyFixed} onChange={setB('monthlyFixed')} suffix="€/mes" />
-          <NumField label="Cena elektrike" value={s.business.kwhPrice} onChange={setB('kwhPrice')} suffix="€/kWh" />
           <NumField label="Davčna rezerva (od prihodka)" value={s.business.taxPct} onChange={setB('taxPct')} suffix="%" />
           <NumField label="Stopnja DDV" value={s.business.vatPct} onChange={setB('vatPct')} suffix="%" />
           <div className="col-span-2"><Check label="Obračunavam DDV" checked={s.business.vatEnabled} onChange={setB('vatEnabled')} /></div>
@@ -79,6 +80,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
                 <TextField label="Vrsta" value={m.type} onChange={(type) => setM(i, { type })} />
                 <NumField label="Neto masa koluta" value={m.spoolG} onChange={(spoolG) => setM(i, { spoolG })} suffix="g" />
                 <TextField label="Temp. sušenja" value={m.dryTemp ?? ''} onChange={(dryTemp) => setM(i, { dryTemp })} />
+                <NumField label="Lepilo (0 = brez)" value={m.adhesive ?? 0} onChange={(adhesive) => setM(i, { adhesive })} suffix="€/tisk" />
               </div>
               <div className="mt-2 space-y-2">
                 {m.prices.map((pr, k) => (

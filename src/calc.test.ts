@@ -160,7 +160,7 @@ describe('zaokroževanje, plošče, statusi, podvoji', () => {
     const s = noRound()
     const plates = { ...demoJob(), usePlates: true, plates: [{ hours: 9, minutes: 24, grams: 384, materialId: 'bambu-asa' }, { hours: 9, minutes: 24, grams: 384, materialId: 'bambu-asa' }] }
     const a = calculate(plates, s), b = calculate(demoJob(), s)
-    expect(a.printHours).toBeCloseTo(b.printHours); expect(a.kg).toBeCloseTo(b.kg); expect(r2(a.net)).toBe(r2(b.net))
+    expect(a.printHours).toBeCloseTo(b.printHours); expect(a.kg).toBeCloseTo(b.kg); expect(a.adhesive).toBeCloseTo(2 * b.adhesive); expect(a.net).toBeGreaterThan(b.net)
     const mixed = calculate({ ...plates, plates: [plates.plates[0], { ...plates.plates[1], materialId: 'bambu-pla' }] }, s)
     expect(mixed.material).not.toBeCloseTo(a.material)
   })

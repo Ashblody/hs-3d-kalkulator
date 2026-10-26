@@ -26,6 +26,8 @@ export interface Material {
   prices: MaterialPrice[]
   activePrice: number
   dryTemp?: string
+  /** lepilo za podlago: € na tisk (0 = brez, npr. PLA/PETG) */
+  adhesive?: number
   source?: string
 }
 
@@ -35,6 +37,8 @@ export interface Rates {
   /** zaokroževanje ponudbe navzgor: 0 = izklop, 1 ali 5 € */
   roundTo: number
   fileAddonStep: number
+  /** privzeto lepilo za ASA/ABS/PC/najlon/CF: € na tisk */
+  adhesiveDefault: number
   /** v4: tisk po fiksni ceni na uro tiskalnika (material posebej po strošku) */
   printHourly: number
   /** v4: ena postavka za moje delo (sken, obdelava, CAD, slicer, dodelava) */

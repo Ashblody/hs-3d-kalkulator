@@ -29,7 +29,7 @@ export function totalPrintHours(j: JobInput) {
 
 export interface Result {
   printHours: number; kg: number; powerW: number
-  material: number; electricity: number; wear: number; consumables: number; otherDirect: number
+  material: number; electricity: number; wear: number; consumables: number; otherDirect: number; adhesive: number; adhesiveLabel: string
   printBeforeReserve: number; reserve: number; printCost: number; printOverridden: boolean
   markup: number; printSale: number; printMarginPct: number
   servicesStandard: number; servicesDiscount: number; services: number
@@ -69,14 +69,19 @@ export function calculate(j: JobInput, s0: Settings): Result {
   const wear = printer ? printHours * wearPerHour(printer) : 0
   const consumables = nz(j.consumables)
   const otherDirect = nz(j.otherDirect)
-  const printBeforeReserve = material + electricity + wear + consumables + otherDirect
+  // lepilo: najdražje med uporabljenimi materiali × število tiskov (plošč)
+  const usedMats = j.usePlates ? [...new Set([j.materialId, ...plates.map((p) => p.materialId)])].map((id) => s.materials.find((m) => m.id === id)) : [mat]
+  const adhesiveMat = usedMats.reduce<typeof mat>((best, m) => (m && nz(m.adhesive ?? 0) > nz(best?.adhesive ?? 0) ? m : best), undefined)
+  const adhesive = printHours > 0 || kg > 0 ? nz(adhesiveMat?.adhesive ?? 0) * (j.usePlates ? Math.max(1, plates.length) : 1) : 0
+  const adhesiveLabel = adhesiveMat && adhesive > 0 ? adhesiveMat.type : ''
+  const printBeforeReserve = material + electricity + wear + consumables + otherDirect + adhesive
   const reserve = printBeforeReserve * (nz(j.reservePct) / 100)
   const printOverridden = j.printCostOverride !== null && Number.isFinite(j.printCostOverride) && j.printCostOverride >= 0
   const printCost = printOverridden ? (j.printCostOverride as number) : printBeforeReserve + reserve
 
   const r = s.rates
   // tisk = fiksno € na uro tiskalnika + material/potrošni po strošku
-  const printDirect = printOverridden ? (j.printCostOverride as number) : material + consumables + otherDirect
+  const printDirect = printOverridden ? (j.printCostOverride as number) : material + consumables + otherDirect + adhesive
   const printSale = printHours * nz(r.printHourly) + printDirect
   const markup = printSale - printCost
 
@@ -118,7 +123,7 @@ export function calculate(j: JobInput, s0: Settings): Result {
   const belowTarget = laborHours > 0 && earningsPerHour < s.business.targetHourly
 
   return {
-    printHours, kg, powerW, material, electricity, wear, consumables, otherDirect,
+    printHours, kg, powerW, material, electricity, wear, consumables, otherDirect, adhesive, adhesiveLabel,
     printBeforeReserve, reserve, printCost, printOverridden, markup, printSale,
     printMarginPct: printSale > 0 ? (markup / printSale) * 100 : 0,
     servicesStandard, servicesDiscount, services, digital, profit, laborHours, baseTotal, invoiceMult, invoiceExtra,
@@ -141,7 +146,7 @@ export function validateJob(j: JobInput): string[] {
   const e: string[] = []
   const nums: [keyof JobInput, string][] = [
     ['pieces', 'Število kosov'], ['gramsPerPiece', 'Teža kosa'], ['hoursPerPiece', 'Ure tiska'],
-    ['minutesPerPiece', 'Minute tiska'], ['extraMaterialG', 'Dodatna poraba'], ['consumables', 'Potrošni material'],
+    ['minutesPerPiece', 'Minute tiska'], ['consumables', 'Potrošni material'],
     ['reservePct', 'Rezerva'], ['markupPct', 'Pribitek'], ['km', 'Kilometri'], ['discount', 'Popust'],
   ]
   for (const [k, l] of nums) { const v = j[k] as number; if (!Number.isFinite(v) || v < 0) e.push(`${l} mora biti 0 ali več.`) }
