@@ -11,6 +11,7 @@ import { copyText, jobText } from './quick'
 import { exportJson, importJson, mergeStates } from './backup'
 import { buildPdf, buildXlsx, pdfName, saveFile, xlsxName } from './exporters'
 import InstallHint from './InstallHint'
+import { DriveSyncCard, useDriveSync } from './DriveSync'
 import CustomersView, { CustomerPicker } from './CustomersView'
 import { applyCustomer } from './customers'
 import { effSettings } from './calc'
@@ -38,6 +39,7 @@ export default function App() {
       if (res !== 'cancelled') flash(res === 'shared' ? 'Deljeno' : 'Datoteka prenesena')
     } catch (e) { console.error(e); alert('Izvoz ni uspel.') }
   }
+  const sync = useDriveSync(st, setSt, flash)
   const project = st.projects.find((p) => p.id === st.currentId)
   const calcSettings = effSettings(st.current, project ? project.snapshot : st.settings)
   const custOf = (j: JobInput) => (st.customers ?? []).find((c) => c.id === j.customerId)
@@ -92,11 +94,11 @@ export default function App() {
               onPick={(c) => setSt((s) => ({ ...s, current: applyCustomer(s.current, c, s.projects, project ? project.snapshot : s.settings) }))} />} />
         </>)}
         {tab === 'projekti' && <ProjectsView projects={st.projects} currentId={st.currentId} onOpen={open} onCopy={copy}
-          onDelete={(p) => setSt({ ...st, projects: st.projects.filter((x) => x.id !== p.id), currentId: st.currentId === p.id ? null : st.currentId })}
+          onDelete={(p) => setSt({ ...st, deleted: [...(st.deleted ?? []), p.id], projects: st.projects.filter((x) => x.id !== p.id), currentId: st.currentId === p.id ? null : st.currentId })}
           onPdf={(p) => printQuote(p.input, p.snapshot, p.id)} onExport={(p, k) => doExport(p.input, p.snapshot, p.id, k)}
-          onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual } : x)) })}
+          onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual, updatedAt: new Date().toISOString() } : x)) })}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />}
-        {tab === 'stranke' && <CustomersView customers={st.customers} projects={st.projects} onOpen={open} onChange={(customers) => setSt({ ...st, customers })} />}
+        {tab === 'stranke' && <CustomersView customers={st.customers} projects={st.projects} onOpen={open} onChange={(customers) => setSt({ ...st, customers, deleted: [...(st.deleted ?? []), ...st.customers.filter((c) => !customers.some((x) => x.id === c.id)).map((c) => c.id)] })} />}
         {tab === 'hitri' && <Quick settings={st.settings} flash={flash} customers={st.customers} projects={st.projects} onCreateCustomer={(c) => setSt((s) => ({ ...s, customers: [...s.customers, c] }))} onSave={({ input, snapshot }) => {
           const p = { ...newProject(input, snapshot) }
           setSt((s) => ({ ...s, projects: [...s.projects, p] })); flash(`Shranjeno v Projekti: ${input.name}`)
@@ -118,6 +120,7 @@ export default function App() {
             </div>
             <p className="text-xs text-slate-500 mt-2">Za prenos med telefonom in računalnikom: na eni napravi Izvozi kopijo (shrani v Google Drive), na drugi Uvozi kopijo. Projekti se združijo po ID, dvojnikov ni; cenik ostane lokalni.</p>
           </div>
+          <DriveSyncCard sync={sync} />
           <InstallHint />
           <SettingsView s={st.settings} onChange={(settings) => setSt({ ...st, settings })} />
         </>)}

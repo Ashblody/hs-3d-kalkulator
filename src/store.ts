@@ -3,7 +3,7 @@ import type { Customer, JobInput, Project, Settings, Status } from './types'
 import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, blankJob, ratesV1, rates as ratesNow } from './seed'
 import { uid } from './format'
 
-export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; current: JobInput; currentId: string | null; dark: boolean }
+export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; deleted?: string[]; current: JobInput; currentId: string | null; dark: boolean }
 const KEY = 'hs3d-kalkulator-v1'
 
 export function newProject(input: JobInput, settings: Settings): Project {
@@ -75,6 +75,7 @@ export function normalize(raw: unknown): AppState {
     version: 1,
     settings: { ...base.settings, ...r.settings, materials, materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 7, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
     projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, rates: dropOldRates({ ...base.settings.rates, ...p.snapshot.rates }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
+    deleted: Array.isArray(r.deleted) ? r.deleted.filter((x) => typeof x === 'string') : [],
     customers: Array.isArray(r.customers) ? r.customers.filter((c) => c && c.id && c.name) : [],
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,

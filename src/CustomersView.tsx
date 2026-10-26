@@ -27,7 +27,7 @@ export default function CustomersView({ customers, projects, onChange, onOpen }:
   const [sel, setSel] = useState<string | null>(customers[0]?.id ?? null)
   const [name, setName] = useState('')
   const c = customers.find((x) => x.id === sel)
-  const upd = (patch: Partial<Customer>) => c && onChange(customers.map((x) => (x.id === c.id ? { ...x, ...patch } : x)))
+  const upd = (patch: Partial<Customer>) => c && onChange(customers.map((x) => (x.id === c.id ? { ...x, ...patch, updatedAt: new Date().toISOString() } : x)))
   return (
     <div className="grid lg:grid-cols-[320px_1fr] gap-4">
       <div className="card self-start space-y-2">
