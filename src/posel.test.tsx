@@ -56,3 +56,53 @@ describe('regresija: 0 v poslovnih nastavitvah', () => {
     expect(document.body.textContent).not.toMatch(/NaN|Infinity|∞/)
   })
 })
+
+import { fixedMonths, monthOptions, yearOptions, shiftMonth, periodProjects, monthLabel } from './period'
+import { calculate as calc2 } from './calc'
+import type { Project } from './types'
+function mk(date: string, status: Project['status'] = 'sprejeto'): Project {
+  const s = defaultSettings(); const input = { ...demoJob(), date }
+  return { id: date + status, name: 'p ' + date, status, input, snapshot: s, createdAt: date, updatedAt: date } as unknown as Project
+}
+describe('Posel: izbira obdobja', () => {
+  const now = new Date(2026, 9, 27)
+  it('pomožne funkcije', () => {
+    expect(fixedMonths({ kind: 'month', ym: '2026-03' }, now)).toBe(1)
+    expect(fixedMonths({ kind: 'year', year: 2026 }, now)).toBe(10)
+    expect(fixedMonths({ kind: 'year', year: 2025 }, now)).toBe(12)
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12'); expect(shiftMonth('2026-12', 1)).toBe('2027-01')
+    expect(monthLabel('2026-10')).toBe('oktober 2026')
+    const ps = [mk('2025-11-05'), mk('2026-06-21', 'opravljeno'), mk('2026-06-02', 'ponudba'), mk('2026-02-01')]
+    expect(monthOptions(ps, now)).toEqual(['2026-10', '2026-06', '2026-02', '2025-11'])
+    expect(yearOptions(ps, now)).toEqual([2026, 2025])
+    expect(periodProjects(ps, { kind: 'year', year: 2026 }).length).toBe(2)
+    expect(periodProjects(ps, { kind: 'month', ym: '2026-06' }).length).toBe(1)
+  })
+  it('leto sešteje prihodke in množi fiksne stroške', () => {
+    const s = defaultSettings(); s.business.monthlyFixed = 100
+    const y = new Date().getFullYear()
+    const ps = [mk(`${y}-01-10`), mk(`${y}-01-20`)]
+    const rev = ps.reduce((a, p) => a + calc2(p.input, p.snapshot).net, 0)
+    cleanup(); render(<Dashboard projects={ps} settings={s} />)
+    fireEvent.click(screen.getByText('Celo leto'))
+    const months = new Date().getMonth() + 1
+    expect(document.body.textContent).toContain(`Celo leto ${y}`)
+    expect(document.body.textContent).toContain(`× ${months} mes.`)
+    expect(document.body.textContent).toContain('(2)')
+    const sel = screen.getByLabelText('Leto') as HTMLSelectElement
+    expect(sel.value).toBe(String(y))
+    fireEvent.click(screen.getByLabelText('Prejšnje leto'))
+    expect(document.body.textContent).toContain('× 12 mes. (celo leto)')
+    expect(document.body.textContent).toContain(`V letu ${y - 1} še ni projektov`)
+    expect(rev).toBeGreaterThan(0)
+  })
+  it('privzeto tekoči mesec in puščica na prejšnji mesec', () => {
+    cleanup(); render(<Dashboard projects={[]} settings={defaultSettings()} />)
+    expect(screen.getByLabelText('Mesec')).toBeTruthy()
+    const d = new Date(); const cur = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    expect((screen.getByLabelText('Mesec') as HTMLSelectElement).value).toBe(cur)
+    expect(document.body.textContent).toContain('V tem mesecu ni projektov')
+    fireEvent.click(screen.getByLabelText('Prejšnji mesec'))
+    expect((screen.getByLabelText('Mesec') as HTMLSelectElement).value).toBe(shiftMonth(cur, -1))
+  })
+})
