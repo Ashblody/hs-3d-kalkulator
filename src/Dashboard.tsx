@@ -4,7 +4,7 @@ import { calculate, monthlyPlan } from './calc'
 import { eur, num } from './format'
 import { Big, Row } from './ui'
 
-const billable = new Set(['sprejeto', 'natisnjeno', 'placano'])
+const billable = new Set(['sprejeto', 'natisnjeno', 'placano', 'opravljeno'])
 
 export default function Dashboard({ projects, settings }: { projects: Project[]; settings: Settings }) {
   const month = new Date().toISOString().slice(0, 7)
@@ -22,8 +22,8 @@ export default function Dashboard({ projects, settings }: { projects: Project[];
   ]
   return (
     <div className="space-y-4">
-      <div className="text-sm text-slate-500">Mesec {month} · upoštevani projekti s statusom sprejeto, natisnjeno ali plačano ({inMonth.length})</div>
-      {inMonth.length === 0 && <div className="card text-sm text-orange-700 dark:text-orange-300">Ta mesec še ni projektov s statusom Sprejeto, Natisnjeno ali Plačano, zato so prihodki 0. V zavihku Projekti nastavi status (ponudbe se ne štejejo).{b.monthlyFixed > 0 ? '' : ' Prispevki so 0 €, zato je rezultat 0 €.'}</div>}
+      <div className="text-sm text-slate-500">Mesec {month} · upoštevani projekti s statusom sprejeto, natisnjeno, plačano ali opravljeno ({inMonth.length})</div>
+      {inMonth.length === 0 && <div className="card text-sm text-orange-700 dark:text-orange-300">Ta mesec še ni projektov s statusom Sprejeto, Natisnjeno, Plačano ali Opravljeno, zato so prihodki 0. V zavihku Projekti nastavi status (ponudbe se ne štejejo).{b.monthlyFixed > 0 ? '' : ' Prispevki so 0 €, zato je rezultat 0 €.'}</div>}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Big label="Prihodki" value={eur(revenue)} />
         <Big label="Stroški + fiksni + davek" value={eur(costs + b.monthlyFixed + tax)} tone="slate" />

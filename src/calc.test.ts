@@ -218,7 +218,7 @@ describe('v7: Osebno / Poslovno', () => {
   it('normalize: projekti, stare nastavitve Domači odstranjene', () => {
     const st0 = initialState(); const o = structuredClone(st0.settings) as never as { rates: Record<string, number>; ratesVersion: number }
     o.rates.friendPrintHourly = 1; o.rates.familyLabourPct = 0; o.ratesVersion = 6
-    const st = normalize({ settings: o as never, projects: [{ ...st0.projects[0], input: { ...st0.projects[0].input, mode: 'zase' as never } }, { ...st0.projects[0], id: 'y', input: { ...st0.projects[0].input, mode: 'stranka' as never, invoice: true } as never }] })
+    const st = normalize({ migrations: ['xlsx-opravljeni-2026-10-27'], settings: o as never, projects: [{ ...st0.projects[0], input: { ...st0.projects[0].input, mode: 'zase' as never } }, { ...st0.projects[0], id: 'y', input: { ...st0.projects[0].input, mode: 'stranka' as never, invoice: true } as never }] })
     expect(st.projects.map((p) => p.input.mode)).toEqual(['osebno', 'poslovno'])
     expect('friendPrintHourly' in st.settings.rates).toBe(false); expect('familyLabourPct' in st.settings.rates).toBe(false)
     expect('invoice' in st.projects[1].input).toBe(false)

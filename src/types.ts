@@ -1,7 +1,7 @@
 /** Osebno = na roke; Poslovno = z računom (× invoiceMultiplier) */
 export type Mode = 'osebno' | 'poslovno'
 export type OrderType = 'tisk' | 'sken' | 'cad' | 'kombinirano' | 'digitalno'
-export type Status = 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano'
+export type Status = 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano' | 'opravljeno'
 /** plošča iz slicerja (Bambu Studio / PrusaSlicer) */
 export interface Plate { hours: number; minutes: number; grams: number; materialId: string }
 

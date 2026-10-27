@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import type { Customer, JobInput, Project, Settings, Status } from './types'
 import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, blankJob, ratesV1, withAdhesive, rates as ratesNow } from './seed'
 import { uid } from './format'
+import { applyImport, IMPORT_ID } from './importXlsx'
 
-export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; deleted?: string[]; current: JobInput; currentId: string | null; dark: boolean }
+export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; deleted?: string[]; migrations?: string[]; current: JobInput; currentId: string | null; dark: boolean }
 const KEY = 'hs3d-kalkulator-v1'
 
 export function newProject(input: JobInput, settings: Settings): Project {
@@ -14,10 +15,13 @@ export function newProject(input: JobInput, settings: Settings): Project {
 export function initialState(): AppState {
   const settings = defaultSettings()
   const demo = newProject(demoJob(), settings)
-  return { version: 1, settings, projects: [demo], customers: [], current: structuredClone(demo.input), currentId: demo.id, dark: window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false }
+  // migracija uvoza se ob čisti namestitvi ne zažene tukaj (glej freshState)
+  return { version: 1, settings, projects: [demo], customers: [], migrations: [IMPORT_ID], current: structuredClone(demo.input), currentId: demo.id, dark: window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false }
 }
+/** nova naprava brez podatkov: brez demo projekta, z uvoženimi opravljenimi projekti */
+export const freshState = (): AppState => applyImport({ ...initialState(), projects: [], current: demoJob(), currentId: null, migrations: [] })
 
-const statusMap: Record<string, Status> = { ponudba: 'ponudba', osnutek: 'ponudba', sprejeto: 'sprejeto', potrjeno: 'sprejeto', izdelava: 'sprejeto', natisnjeno: 'natisnjeno', zakljuceno: 'natisnjeno', placano: 'placano' }
+const statusMap: Record<string, Status> = { ponudba: 'ponudba', osnutek: 'ponudba', sprejeto: 'sprejeto', potrjeno: 'sprejeto', izdelava: 'sprejeto', natisnjeno: 'natisnjeno', zakljuceno: 'natisnjeno', placano: 'placano', opravljeno: 'opravljeno' }
 export const migrateStatus = (s: string | undefined): Status => statusMap[s ?? ''] ?? 'ponudba'
 
 /** Podvoji projekt kot nov (ime + ' (kopija)', status Ponudba, trenutni cenik) */
@@ -88,22 +92,23 @@ export function normalize(raw: unknown): AppState {
   const migrateRound = (r.settings.ratesVersion ?? 1) < 8
   // v6: datoteke samo kot doplačilo k tisku – odstrani stare nastavitve
   for (const k of ['fileHandoverFee', 'repeatSalePct', ...OLD_RATES]) delete (storedRates as unknown as Record<string, unknown>)[k]
-  return {
+  return applyImport({
     version: 1,
     settings: { ...base.settings, ...r.settings, materials: withAdhesive(materials, storedRates.adhesiveDefault), materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 9, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
     projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, materials: (p.snapshot.materials ?? []).map((m) => (m.adhesive === undefined ? { ...m, adhesive: 0 } : m)), rates: dropOldRates({ ...base.settings.rates, ...p.snapshot.rates, ...(migrateRound && p.snapshot.rates?.roundTo === 5 ? { roundTo: storedRates.roundTo } : {}) }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     deleted: Array.isArray(r.deleted) ? r.deleted.filter((x) => typeof x === 'string') : [],
+    migrations: Array.isArray(r.migrations) ? r.migrations.filter((x) => typeof x === 'string') : [],
     customers: Array.isArray(r.customers) ? r.customers.filter((c) => c && c.id && c.name) : [],
     current: fixJob(r.current ?? emptyJob()),
     currentId: r.currentId ?? null,
     dark: !!r.dark,
-  }
+  })
 }
 
 export function usePersistentState() {
   const [state, setState] = useState<AppState>(() => {
     try { const s = localStorage.getItem(KEY); if (s) return normalize(JSON.parse(s)) } catch { /* prvi zagon */ }
-    return initialState()
+    return freshState()
   })
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(state)) }, [state])
   useEffect(() => { document.documentElement.classList.toggle('dark', state.dark) }, [state.dark])
