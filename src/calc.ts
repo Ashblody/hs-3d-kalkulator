@@ -20,7 +20,11 @@ export function fileSaleInfo(j: JobInput, s: Settings) {
   return { price }
 }
 
+/** tisk je privzeto vklopljen (stari projekti nimajo polja) */
+export const isPrinting = (j: JobInput) => j.printing !== false
+
 export function totalPrintHours(j: JobInput) {
+  if (!isPrinting(j)) return 0
   // skupen čas serije se NE množi s številom kosov
   if (j.usePlates) return (j.plates ?? []).reduce((a, p) => a + nz(p.hours) + nz(p.minutes) / 60, 0)
   if (j.useBatchTime) return nz(j.batchHours) + nz(j.batchMinutes) / 60
@@ -52,7 +56,15 @@ export function effSettings(j: JobInput, s: Settings): Settings {
   return { ...s, rates: { ...s.rates, ...Object.fromEntries(Object.entries(o).filter(([k, v]) => k !== 'roundTo' && typeof v === 'number' && Number.isFinite(v))) } }
 }
 
-export function calculate(j: JobInput, s0: Settings): Result {
+/** Posel brez tiska: vse, kar je vezano na tisk, je 0 (material, elektrika, obraba, lepilo, rezerva, ročni strošek tiska) */
+export const withoutPrint = (j: JobInput): JobInput => ({
+  ...j, usePlates: false, plates: [], useBatchTime: true, batchHours: 0, batchMinutes: 0, hoursPerPiece: 0, minutesPerPiece: 0,
+  gramsPerPiece: 0, extraMaterialG: 0, consumables: 0, otherDirect: 0, reservePct: 0, printCostOverride: null,
+})
+
+export function calculate(j0: JobInput, s0: Settings): Result {
+  const on = isPrinting(j0)
+  const j = on ? j0 : withoutPrint(j0)
   const s = effSettings(j, s0)
   const printer = s.printers.find((p) => p.id === j.printerId)
   const mat = s.materials.find((m) => m.id === j.materialId)
@@ -110,7 +122,7 @@ export function calculate(j: JobInput, s0: Settings): Result {
   const rounding = net - netBeforeRounding
   const vat = s.business.vatEnabled ? net * (s.business.vatPct / 100) : 0
   const gross = net + vat
-  const perPiece = nz(j.pieces) > 0 ? gross / j.pieces : gross
+  const perPiece = on && nz(j.pieces) > 0 ? gross / j.pieces : gross
 
   // Moj strošek: material, elektrika, obraba, potrošni, rezerva + prevoz/pakiranje/dostava
   const passThrough = transport + packaging + delivery + otherCosts
@@ -149,8 +161,9 @@ export function validateJob(j: JobInput): string[] {
     ['minutesPerPiece', 'Minute tiska'], ['consumables', 'Potrošni material'],
     ['reservePct', 'Rezerva'], ['markupPct', 'Pribitek'], ['km', 'Kilometri'], ['discount', 'Popust'],
   ]
-  for (const [k, l] of nums) { const v = j[k] as number; if (!Number.isFinite(v) || v < 0) e.push(`${l} mora biti 0 ali več.`) }
-  if (j.minutesPerPiece >= 60 || j.batchMinutes >= 60) e.push('Minute morajo biti manj kot 60.')
+  const printKeys: (keyof JobInput)[] = ['gramsPerPiece', 'hoursPerPiece', 'minutesPerPiece', 'consumables', 'reservePct']
+  for (const [k, l] of nums) { if (!isPrinting(j) && printKeys.includes(k)) continue; const v = j[k] as number; if (!Number.isFinite(v) || v < 0) e.push(`${l} mora biti 0 ali več.`) }
+  if (isPrinting(j) && (j.minutesPerPiece >= 60 || j.batchMinutes >= 60)) e.push('Minute morajo biti manj kot 60.')
   if (!Number.isInteger(j.pieces) || j.pieces < 1) e.push('Število kosov mora biti celo število, vsaj 1.')
   return e
 }

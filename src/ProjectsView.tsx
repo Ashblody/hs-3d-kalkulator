@@ -3,7 +3,7 @@ import type { Actuals, Project, Status } from './types'
 import { HoursField, NumField } from './ui'
 import { BARE_WORK } from './duration'
 import { num } from './format'
-import { calculate } from './calc'
+import { calculate, isPrinting } from './calc'
 import { eur } from './format'
 
 export const statusLabels: Record<Status, string> = { ponudba: 'Ponudba', sprejeto: 'Sprejeto', natisnjeno: 'Natisnjeno', placano: 'Plačano', opravljeno: 'Opravljeno' }
@@ -29,13 +29,14 @@ export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDe
       {!sorted.length && <div className="card text-slate-500">Ni projektov s tem statusom.</div>}
       {sorted.map((p) => {
         const r = calculate(p.input, p.snapshot)
+        const pr = isPrinting(p.input)
         return (
           <div key={p.id} className={`card ${p.id === currentId ? '!ring-2 !ring-sky-500' : ''}`}>
             <div className="flex justify-between gap-2">
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900 dark:text-white truncate"><span className={`mr-2 rounded-full px-2 py-0.5 text-xs ${statusColors[p.status] ?? ''}`}>{statusLabels[p.status] ?? p.status}</span>{p.input.name || '(brez imena)'}</div>
                 <div className="text-xs text-slate-500">{p.input.client || '—'} · {p.input.date} · {p.input.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}</div>
-                <div className="text-xs text-slate-500">{num(r.kg * 1000)} g · {num(r.printHours)} h tiska · material {eur(r.material)}</div>
+                <div className="text-xs text-slate-500">{pr ? `${num(r.kg * 1000)} g · ${num(r.printHours)} h tiska · material ${eur(r.material)}` : `brez tiska · ${num(r.laborHours)} h dela`}</div>
               </div>
               <div className="text-right"><div className="font-bold text-emerald-600">{eur(r.gross)}</div><div className="text-xs text-slate-500">zaslužek {eur(r.earnings)}</div></div>
             </div>
@@ -53,13 +54,13 @@ export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDe
             <details className="mt-3">
               <summary className="text-sm cursor-pointer text-slate-500">Dejanska poraba vs. ocena</summary>
               <div className="grid grid-cols-3 gap-2 mt-2">
-                <HoursField label="Čas tiska" hours={p.actual.printHours} onChange={(v) => onActual(p, { ...p.actual, printHours: v })} />
-                <NumField label="Material" suffix="g" value={p.actual.grams} onChange={(v) => onActual(p, { ...p.actual, grams: v })} />
+                {pr && <HoursField label="Čas tiska" hours={p.actual.printHours} onChange={(v) => onActual(p, { ...p.actual, printHours: v })} />}
+                {pr && <NumField label="Material" suffix="g" value={p.actual.grams} onChange={(v) => onActual(p, { ...p.actual, grams: v })} />}
                 <HoursField label="Delo" bareFrom={BARE_WORK} hours={p.actual.laborHours} onChange={(v) => onActual(p, { ...p.actual, laborHours: v })} />
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs mt-1 text-slate-500">
-                <Diff est={r.printHours} act={p.actual.printHours} unit="h" />
-                <Diff est={r.kg * 1000} act={p.actual.grams} unit="g" />
+                {pr && <Diff est={r.printHours} act={p.actual.printHours} unit="h" />}
+                {pr && <Diff est={r.kg * 1000} act={p.actual.grams} unit="g" />}
                 <Diff est={r.laborHours} act={p.actual.laborHours} unit="h" />
               </div>
             </details>

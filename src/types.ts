@@ -79,6 +79,8 @@ export interface JobInput {
   description: string
   mode: Mode
   orderType: OrderType
+  /** ali posel vsebuje 3D-tisk; manjka = da (stari projekti). Brez tiska: samo storitve (sken, modeliranje …) */
+  printing?: boolean
   printerId: string
   materialId: string
   pieces: number

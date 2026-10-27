@@ -1,4 +1,4 @@
-import { jobFloor } from './calc'
+import { isPrinting, jobFloor } from './calc'
 import type { Customer, JobInput, Settings } from './types'
 import { quoteData, quoteNumber, safeName } from './quoteData'
 
@@ -76,23 +76,24 @@ export async function buildXlsx(job: JobInput, settings: Settings, id: string, c
   ]
   const ph = r.printHours * settings.rates.printHourly
   const fl = jobFloor(r, settings)
+  const pr = isPrinting(job)
   const razclenitev: (string | number)[][] = [['Postavka', 'Znesek €'],
     ['CENA ZA STRANKO', ''],
-    [`Tisk ${r2(r.printHours)} h × ${settings.rates.printHourly} €/h`, r2(r.printSale - (r.printOverridden ? (job.printCostOverride ?? 0) : r.material + r.consumables + r.otherDirect + r.adhesive))],
+    ...(pr ? [[`Tisk ${r2(r.printHours)} h × ${settings.rates.printHourly} €/h`, r2(r.printSale - (r.printOverridden ? (job.printCostOverride ?? 0) : r.material + r.consumables + r.otherDirect + r.adhesive))],
     [`Material ${r2(r.kg * 1000)} g`, r2(r.printOverridden ? (job.printCostOverride ?? 0) : r.material)],
     ...(r.adhesive > 0 && !r.printOverridden ? [[`Lepilo (${r.adhesiveLabel})`, r2(r.adhesive)] as [string, number]] : []),
-    ['Potrošni material', r2(r.printOverridden ? 0 : r.consumables + r.otherDirect)],
+    ['Potrošni material', r2(r.printOverridden ? 0 : r.consumables + r.otherDirect)]] as (string | number)[][] : []),
     [`Moje delo ${r2(r.laborHours)} h × ${settings.rates.labourHourly} €/h`, r2(r.servicesStandard)],
     ['Datoteka', r2(r.digital)], ['Prevoz in ostali stroški', r2(r.transport + r.packaging + r.delivery + r.otherCosts)],
     ...(r.invoiceMult !== 1 ? [[`Poslovno × ${r.invoiceMult}`, r2(r.invoiceExtra)]] : []), ...(r.discount > 0 ? [['Popust', -r2(r.discount)]] : []),
     ['Skupaj', r2(r.netBeforeRounding)], [`Zaokroženo navzgor (${settings.rates.roundTo || 'brez'} €)`, r2(r.rounding)], ['Končna cena (brez DDV)', r2(r.net)], ['Za plačilo', r2(r.gross)], [],
     ['MOJ STROŠEK – SAMO ZAME (ni v ceni)', ''],
-    ['Material', r2(r.material)], ['Elektrika', r2(r.electricity)], ['Obraba tiskalnika', r2(r.wear)], ...(r.adhesive > 0 ? [[`Lepilo (${r.adhesiveLabel})`, r2(r.adhesive)] as [string, number]] : []), ['Potrošni material', r2(r.consumables + r.otherDirect)], ['Rezerva', r2(r.reserve)],
+    ...(pr ? [['Material', r2(r.material)], ['Elektrika', r2(r.electricity)], ['Obraba tiskalnika', r2(r.wear)], ...(r.adhesive > 0 ? [[`Lepilo (${r.adhesiveLabel})`, r2(r.adhesive)] as [string, number]] : []), ['Potrošni material', r2(r.consumables + r.otherDirect)], ['Rezerva', r2(r.reserve)]] as (string | number)[][] : []),
     ['Prevoz, pakiranje, dostava, ostalo', r2(r.realCosts - r.printCost)], ['Moj strošek skupaj', r2(r.realCosts)], [],
     ['Dobiček (končna cena − moj strošek)', r2(r.profit)],
     ['Spodnja meja – ne pojdi pod', ''], ['Pod tem izgubljaš (moj strošek)', fl.own], [`Najnižja cena (delo plačano)${job.mode === 'poslovno' ? ' ×2' : ''}`, job.mode === 'poslovno' ? fl.floorBiz : fl.floor],
-    [`Varno popuščanje (tisk 2 €/h)${job.mode === 'poslovno' ? ' ×2' : ''}`, job.mode === 'poslovno' ? fl.safeBiz : fl.safe], ['Popuščaj pri tisku, ne pri svojih urah – tiskalnik dela sam.', ''], ['Delež fiksnih stroškov', r2(r.fixedShare)], ['Ocena davka', r2(r.tax)], ['Predvideni zaslužek', r2(r.earnings)],
-    [`Ur tiska (${r2(ph)} € po urni postavki)`, r2(r.printHours)], ['Ur dela', r2(r.laborHours)]]
+    ...(pr ? [[`Varno popuščanje (tisk 2 €/h)${job.mode === 'poslovno' ? ' ×2' : ''}`, job.mode === 'poslovno' ? fl.safeBiz : fl.safe]] : []), ...(pr ? [['Popuščaj pri tisku, ne pri svojih urah – tiskalnik dela sam.', '']] : []), ['Delež fiksnih stroškov', r2(r.fixedShare)], ['Ocena davka', r2(r.tax)], ['Predvideni zaslužek', r2(r.earnings)],
+    ...(pr ? [[`Ur tiska (${r2(ph)} € po urni postavki)`, r2(r.printHours)]] : []), ['Ur dela', r2(r.laborHours)]]
   const wb = XLSX.utils.book_new()
   const ws1 = XLSX.utils.aoa_to_sheet(ponudba); ws1['!cols'] = [{ wch: 36 }, { wch: 26 }, { wch: 12 }]
   const ws2 = XLSX.utils.aoa_to_sheet(razclenitev); ws2['!cols'] = [{ wch: 40 }, { wch: 12 }]
