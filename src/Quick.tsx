@@ -4,7 +4,8 @@ import { CustomerPicker } from './CustomersView'
 import { applyCustomerQuick } from './customers'
 import { copyText, quickToProject, quickCalc, quickCompare, quickDefaults, quickFloor, quickText, type QuickInput } from './quick'
 import { eur, num } from './format'
-import { Check, NumField, Row } from './ui'
+import { Check, HoursField, NumField, Row } from './ui'
+import { BARE_WORK } from './duration'
 import FloorBox from './FloorBox'
 
 const KEY = 'hs3d-hitri'
@@ -22,9 +23,9 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
     <div className="grid lg:grid-cols-2 gap-4">
       <div className="card grid grid-cols-2 gap-3 self-start">
         <div className="col-span-2"><CustomerPicker customers={customers} value={cust?.id} onCreate={onCreateCustomer} onPick={(c) => { setCust(c); setQ(applyCustomerQuick(q, c, projects)) }} /></div>
-        <NumField label="Ure tiskanja" value={q.printH} onChange={set('printH')} suffix="h" />
+        <HoursField label="Čas tiskanja" hours={q.printH} onChange={set('printH')} />
         <NumField label="Teža materiala" value={q.grams} onChange={set('grams')} suffix="g" />
-        <NumField label="Tvoje ure" value={q.workH} onChange={set('workH')} suffix="h" />
+        <HoursField label="Tvoj čas (delo)" hours={q.workH} onChange={set('workH')} bareFrom={BARE_WORK} />
         <NumField label="Cena materiala" value={q.matKg} onChange={set('matKg')} suffix="€/kg" />
         <NumField label="Tiskanje" value={q.printRate} onChange={set('printRate')} suffix="€/h" />
         <NumField label="Delo" value={q.workRate} onChange={set('workRate')} suffix="€/h" />

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Actuals, Project, Status } from './types'
-import { NumField } from './ui'
+import { HoursField, NumField } from './ui'
+import { BARE_WORK } from './duration'
 import { num } from './format'
 import { calculate } from './calc'
 import { eur } from './format'
@@ -52,9 +53,9 @@ export default function ProjectsView({ projects, currentId, onOpen, onCopy, onDe
             <details className="mt-3">
               <summary className="text-sm cursor-pointer text-slate-500">Dejanska poraba vs. ocena</summary>
               <div className="grid grid-cols-3 gap-2 mt-2">
-                <NumField label="Čas tiska" suffix="h" value={p.actual.printHours} onChange={(v) => onActual(p, { ...p.actual, printHours: v })} />
+                <HoursField label="Čas tiska" hours={p.actual.printHours} onChange={(v) => onActual(p, { ...p.actual, printHours: v })} />
                 <NumField label="Material" suffix="g" value={p.actual.grams} onChange={(v) => onActual(p, { ...p.actual, grams: v })} />
-                <NumField label="Delo" suffix="h" value={p.actual.laborHours} onChange={(v) => onActual(p, { ...p.actual, laborHours: v })} />
+                <HoursField label="Delo" bareFrom={BARE_WORK} hours={p.actual.laborHours} onChange={(v) => onActual(p, { ...p.actual, laborHours: v })} />
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs mt-1 text-slate-500">
                 <Diff est={r.printHours} act={p.actual.printHours} unit="h" />

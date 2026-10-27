@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { num, parseNum } from './format'
+import { BARE_PRINT, describeDuration, formatClock, parseDuration } from './duration'
 
 export function NumField({ label, value, onChange, suffix, min = 0, step }: { label: string; value: number; onChange: (v: number) => void; suffix?: string; min?: number; step?: string }) {
   const [text, setText] = useState(num(value))
@@ -62,4 +63,28 @@ export function Big({ label, value, sub, tone = 'blue' }: { label: string; value
 
 export function Row({ l, v, strong }: { l: string; v: string; strong?: boolean }) {
   return <div className={`flex justify-between py-1 text-sm ${strong ? 'font-semibold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 mt-1 pt-2' : 'text-slate-600 dark:text-slate-300'}`}><span>{l}</span><span className="tabular-nums">{v}</span></div>
+}
+
+/** Čas v enem polju: 1:30 · 1,5 · 90m · 2h 15m · 1d 2h. `minutes` = vrednost v minutah. */
+export function TimeField({ label, minutes, onChange, bareFrom = BARE_PRINT }: { label: string; minutes: number; onChange: (min: number) => void; bareFrom?: number }) {
+  const [text, setText] = useState(formatClock(minutes))
+  const [focus, setFocus] = useState(false)
+  useEffect(() => { if (!focus) setText(formatClock(minutes)) }, [minutes, focus])
+  const parsed = parseDuration(text, bareFrom)
+  const bad = parsed === null
+  return (
+    <label className="block">
+      <span className="lbl">{label}</span>
+      <input className={`inp ${bad ? '!border-red-500' : ''}`} inputMode="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="1:30" value={text} aria-label={label}
+        onFocus={(e) => { setFocus(true); e.target.select() }}
+        onBlur={() => setFocus(false)}
+        onChange={(e) => { setText(e.target.value); const v = parseDuration(e.target.value, bareFrom); if (v !== null) onChange(v) }} />
+      {bad ? <span className="text-xs text-red-500">Napiši npr. 1:30, 1,5, 90m ali 2h 15m</span>
+        : focus && <span className="text-xs text-slate-500" data-testid="time-hint">= {describeDuration(parsed)}</span>}
+    </label>
+  )
+}
+/** isto, vrednost v urah (decimalno) */
+export function HoursField({ label, hours, onChange, bareFrom }: { label: string; hours: number; onChange: (h: number) => void; bareFrom?: number }) {
+  return <TimeField label={label} minutes={hours * 60} bareFrom={bareFrom} onChange={(m) => onChange(m / 60)} />
 }

@@ -2,7 +2,8 @@ import type { JobInput, Mode, Settings } from './types'
 import FloorBox from './FloorBox'
 import { allTiers, TIERS, calculate, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
 import { eur, num } from './format'
-import { Big, Check, NumField, Row, Section, Select, TextField } from './ui'
+import { Big, Check, HoursField, NumField, Row, Section, Select, TextField, TimeField } from './ui'
+import { BARE_WORK } from './duration'
 import { PriceVsCost, StructurePie } from './Charts'
 import { quickCalc, quickDefaults } from './quick'
 
@@ -49,8 +50,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
                   return (
                     <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end rounded-xl bg-slate-50 dark:bg-slate-800/60 dark:ring-1 dark:ring-slate-700/60 p-2">
                       <div className="text-xs font-semibold self-center">Plošča {i + 1}</div>
-                      <NumField label="Ure" value={p.hours} onChange={(v) => setP({ hours: v })} suffix="h" />
-                      <NumField label="Minute" value={p.minutes} onChange={(v) => setP({ minutes: v })} suffix="min" />
+                      <TimeField label="Čas tiska" minutes={p.hours * 60 + p.minutes} onChange={(t) => setP({ hours: Math.floor(t / 60), minutes: t % 60 })} />
                       <NumField label="Grami" value={p.grams} onChange={(v) => setP({ grams: v })} suffix="g" />
                       <div className="flex gap-1 items-end"><Select label="Material" value={p.materialId} onChange={(v) => setP({ materialId: v })} options={settings.materials.map((m) => [m.id, m.name])} />
                         <button className="btn !px-2" title="Odstrani ploščo" onClick={() => onChange({ ...job, plates: job.plates.filter((_, k) => k !== i) })}>×</button></div>
@@ -62,12 +62,10 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             ) : (<>
             <div className="col-span-2 sm:col-span-3"><Check label="Vnesem skupen čas tiska za celo serijo" checked={job.useBatchTime} onChange={set('useBatchTime')} /></div>
             {job.useBatchTime ? (<>
-              <NumField label="Skupen čas – ure" value={job.batchHours} onChange={set('batchHours')} suffix="h" />
-              <NumField label="Skupen čas – minute" value={job.batchMinutes} onChange={set('batchMinutes')} suffix="min" />
+              <TimeField label="Skupen čas tiska" minutes={job.batchHours * 60 + job.batchMinutes} onChange={(t) => onChange({ ...job, batchHours: Math.floor(t / 60), batchMinutes: t % 60 })} />
             </>) : (<>
               <NumField label="Teža kosa" value={job.gramsPerPiece} onChange={set('gramsPerPiece')} suffix="g" />
-              <NumField label="Čas kosa – ure" value={job.hoursPerPiece} onChange={set('hoursPerPiece')} suffix="h" />
-              <NumField label="Čas kosa – minute" value={job.minutesPerPiece} onChange={set('minutesPerPiece')} suffix="min" />
+              <TimeField label="Čas kosa" minutes={job.hoursPerPiece * 60 + job.minutesPerPiece} onChange={(t) => onChange({ ...job, hoursPerPiece: Math.floor(t / 60), minutesPerPiece: t % 60 })} />
             </>)}
             </>)}
             {job.extraMaterialG > 0 && <NumField label="Dodatna poraba (stari vnos)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />}
@@ -83,10 +81,10 @@ export default function Calculator({ job, settings, onChange, actions, customerS
         )}
 
         <Section title={`Moje delo (${num(settings.rates.labourHourly)} €/h, 0 = ne obračunam)`}>
-          <NumField label="Skeniranje" value={job.scanH} onChange={set('scanH')} suffix="h" />
-          <NumField label="Urejanje skena" value={job.editH} onChange={set('editH')} suffix="h" />
-          <NumField label="Modeliranje / CAD / reverse engineering" value={job.cadH} onChange={set('cadH')} suffix="h" />
-          <NumField label="Slicer, priprava in dodelava" value={job.prepH} onChange={set('prepH')} suffix="h" />
+          <HoursField label="Skeniranje" hours={job.scanH} onChange={set('scanH')} bareFrom={BARE_WORK} />
+          <HoursField label="Urejanje skena" hours={job.editH} onChange={set('editH')} bareFrom={BARE_WORK} />
+          <HoursField label="Modeliranje / CAD / reverse engineering" hours={job.cadH} onChange={set('cadH')} bareFrom={BARE_WORK} />
+          <HoursField label="Slicer, priprava in dodelava" hours={job.prepH} onChange={set('prepH')} bareFrom={BARE_WORK} />
         </Section>
 
         <details className="card" open={showDigital}>
@@ -100,7 +98,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <NumField label={`Prevoz (${num(settings.rates.km)} €/km)`} value={job.km} onChange={set('km')} suffix="km" />
           <NumField label="Ostali stroški (pakiranje, dostava …)" value={job.otherCosts} onChange={set('otherCosts')} suffix="€" />
           <NumField label="Popust" value={job.discount} onChange={set('discount')} suffix="€" />
-          <NumField label="Drugo delo (po drugi ceni)" value={job.extraWorkH} onChange={set('extraWorkH')} suffix="h" />
+          <HoursField label="Drugo delo (po drugi ceni)" hours={job.extraWorkH} onChange={set('extraWorkH')} bareFrom={BARE_WORK} />
           {job.extraWorkH > 0 && <NumField label="Drugo delo – cena" value={job.extraWorkRate} onChange={set('extraWorkRate')} suffix="€/h" />}
           <div className="col-span-2 sm:col-span-3">
             <Check label="Ročno določim strošek materiala (namesto izračuna)" checked={job.printCostOverride !== null} onChange={(v) => set('printCostOverride')(v ? Math.round(r.printCost * 100) / 100 : null)} />
