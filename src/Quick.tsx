@@ -3,7 +3,7 @@ import type { Customer, JobInput, Project, Settings } from './types'
 import { CustomerPicker } from './CustomersView'
 import { applyCustomerQuick } from './customers'
 import { copyText, quickToProject, quickCalc, quickCompare, quickDefaults, quickFloor, quickText, type QuickInput } from './quick'
-import { eur } from './format'
+import { eur, num } from './format'
 import { Check, NumField, Row } from './ui'
 import FloorBox from './FloorBox'
 
@@ -34,7 +34,7 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
       </div>
       <div className="space-y-4 self-start">
         <div className="card">
-          <Row l="Tiskanje" v={eur(r.print)} /><Row l="Material" v={eur(r.material)} /><Row l="Delo" v={eur(r.work)} /><Row l="Pribitek" v={eur(r.markup)} />
+          <Row l={`Tiskanje ${num(q.printH)} h × ${num(q.printRate)} €/h`} v={eur(r.print)} /><Row l={`Material ${num(q.grams)} g × ${num(q.matKg)} €/kg`} v={eur(r.material)} /><Row l={`Delo ${num(q.workH)} h × ${num(q.workRate)} €/h`} v={eur(r.work)} /><Row l="Pribitek" v={eur(r.markup)} />
           {r.rounding > 0 && <Row l={`Zaokroženo navzgor na ${settings.rates.roundTo} € (${eur(r.exact)})`} v={`+${eur(r.rounding)}`} />}
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-bold">KONČNA CENA</span><span className="text-3xl font-black tabular-nums" data-testid="quick-total">{eur(r.total)}</span></div>
           {q.business && <div className="flex justify-between items-baseline"><span className="font-semibold">Poslovne stranke (2×)</span><span className="text-2xl font-black tabular-nums text-emerald-600" data-testid="quick-business">{eur(r.business)}</span></div>}

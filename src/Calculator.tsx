@@ -142,7 +142,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <div className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mt-1">Cena za stranko</div>
           <Row l={`Tisk ${num(r.printHours)} h × ${num(settings.rates.printHourly)} €/h`} v={eur(r.printOverridden ? r.printSale - (job.printCostOverride ?? 0) : r.printHours * settings.rates.printHourly)} />
           {r.printOverridden ? <Row l="Material (ročno)" v={eur(job.printCostOverride ?? 0)} /> : <>
-          <Row l={`Material ${num(r.kg * 1000)} g`} v={eur(r.material)} />
+          <Row l={`Material ${num(r.kg * 1000)} g × ${num(r.kg > 0 ? r.material / r.kg : 0)} €/kg`} v={eur(r.material)} />
           {r.adhesive > 0 && <Row l={`Lepilo (${r.adhesiveLabel})`} v={eur(r.adhesive)} />}
           {r.consumables + r.otherDirect > 0 && <Row l="Potrošni material" v={eur(r.consumables + r.otherDirect)} />}</>}
           <Row l={`Moje delo ${num(r.laborHours)} h × ${num(settings.rates.labourHourly)} €/h`} v={eur(r.servicesStandard)} />
@@ -159,7 +159,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <div className="text-xs font-semibold uppercase tracking-wide">Moj strošek – samo zame (da je pokrito)</div>
           <div className="text-xs mb-1">Ni prištet k ceni, samo pokaže, koliko te posel stane.</div>
           {r.printOverridden ? <Row l="Strošek tiska (ročno)" v={eur(r.printCost)} /> : <>
-          <Row l={`Material ${num(r.kg * 1000)} g`} v={eur(r.material)} />
+          <Row l={`Material ${num(r.kg * 1000)} g × ${num(r.kg > 0 ? r.material / r.kg : 0)} €/kg`} v={eur(r.material)} />
           <Row l="Elektrika" v={eur(r.electricity)} />
           <Row l="Obraba tiskalnika" v={eur(r.wear)} />
           {r.adhesive > 0 && <Row l={`Lepilo (${r.adhesiveLabel})`} v={eur(r.adhesive)} />}

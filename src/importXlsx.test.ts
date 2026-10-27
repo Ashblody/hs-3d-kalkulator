@@ -70,3 +70,12 @@ describe('uvoz opravljenih projektov iz Excela', () => {
     expect(f.projects.length).toBe(6); expect(f.projects.some((p) => p.input.client === 'Demo')).toBe(false)
   })
 })
+
+import { jobText, quickText, quickDefaults } from './quick'
+describe('gramov ne manjka v izračunu', () => {
+  it('tekst hitrega izračuna in podrobnega vsebuje g × €/kg', () => {
+    expect(quickText({ ...quickDefaults, printH: 2, grams: 78, matKg: 20 })).toMatch(/Material: 78 g × 20,00 €\/kg = 1,56 €/)
+    const p = freshState().projects[0]
+    expect(jobText(p.input, p.snapshot)).toMatch(/Material: 78 g × [\d,]+ €\/kg/)
+  })
+})

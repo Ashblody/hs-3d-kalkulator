@@ -24,7 +24,7 @@ export function quickCalc(q: QuickInput) {
 
 export const quickText = (q: QuickInput) => {
   const r = quickCalc(q)
-  return [`Tiskanje: ${n(q.printH)} h × ${e2(q.printRate)}/h = ${e2(r.print)}`, `Material: ${n(q.grams)} g = ${e2(r.material)}`, `Delo: ${n(q.workH)} h × ${e2(q.workRate)}/h = ${e2(r.work)}`,
+  return [`Tiskanje: ${n(q.printH)} h × ${e2(q.printRate)}/h = ${e2(r.print)}`, `Material: ${n(q.grams)} g × ${e2(q.matKg)}/kg = ${e2(r.material)}`, `Delo: ${n(q.workH)} h × ${e2(q.workRate)}/h = ${e2(r.work)}`,
     ...(r.markup > 0 ? [`Pribitek ${n(q.markupPct)} %: ${e2(r.markup)}`] : []), ...(r.rounding > 0 ? [`Zaokroženo: +${e2(r.rounding)}`] : []), `Končna cena: ${e2(r.total)}`, ...(q.business ? [`Z računom: ${e2(r.business)}`] : [])].join('\n')
 }
 
@@ -39,7 +39,7 @@ export function quickCompare(q: QuickInput, s: Settings) {
 export function jobText(j: JobInput, s0: Settings) {
   const s = effSettings(j, s0)
   const r = calculate(j, s); const t = allTiers(j, s)
-  const lines = [j.name ? `${j.name}` : '', `Tiskanje: ${n(r.printHours)} h × ${e2(s.rates.printHourly)}/h = ${e2(r.printHours * s.rates.printHourly)}`, `Material: ${n(r.kg * 1000)} g = ${e2(r.material)}`,
+  const lines = [j.name ? `${j.name}` : '', `Tiskanje: ${n(r.printHours)} h × ${e2(s.rates.printHourly)}/h = ${e2(r.printHours * s.rates.printHourly)}`, `Material: ${n(r.kg * 1000)} g × ${e2(r.kg > 0 ? r.material / r.kg : 0)}/kg = ${e2(r.material)}`,
     `Delo: ${n(r.laborHours)} h × ${e2(s.rates.labourHourly)}/h = ${e2(r.services)}`]
   if (r.digital > 0) lines.push(`Datoteke: ${e2(r.digital)}`)
   lines.push(`Končna cena: ${e2(r.gross)}`)
