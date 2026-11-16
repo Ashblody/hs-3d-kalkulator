@@ -1,4 +1,4 @@
-import type { JobInput, Mode, Settings } from './types'
+import type { JobInput, Settings } from './types'
 import FloorBox from './FloorBox'
 import { allTiers, TIERS, calculate, isPrinting, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
 import { eur, num } from './format'
@@ -7,7 +7,6 @@ import { BARE_WORK } from './duration'
 import { PriceVsCost, StructurePie } from './Charts'
 import { quickCalc, quickDefaults } from './quick'
 
-const modes: [Mode, string, string][] = [['osebno', 'Osebno', 'na roke'], ['poslovno', 'Poslovno', 'z računom']]
 
 export default function Calculator({ job, settings, onChange, actions, customerSlot }: { job: JobInput; settings: Settings; onChange: (j: JobInput) => void; actions?: React.ReactNode; customerSlot?: React.ReactNode }) {
   const set = <K extends keyof JobInput>(k: K) => (v: JobInput[K]) => onChange({ ...job, [k]: v })
@@ -22,11 +21,6 @@ export default function Calculator({ job, settings, onChange, actions, customerS
     <div className="grid lg:grid-cols-[1fr_420px] gap-4">
       <div className="space-y-4 min-w-0">
         <div className="card">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {modes.map(([m, l, sub]) => (
-              <button key={m} onClick={() => set('mode')(m)} className={`flex-1 rounded-xl px-3 py-2 font-semibold text-sm ${job.mode === m ? (m === 'poslovno' ? 'bg-emerald-600 text-white' : 'bg-sky-600 text-white') : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 ring-1 ring-slate-200 dark:ring-slate-700'}`}>{l}<span className="block text-xs font-normal opacity-80">{sub}{m === 'poslovno' ? ` (×${num(settings.rates.invoiceMultiplier)})` : ''}</span></button>
-            ))}
-          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <TextField label="Ime projekta" value={job.name} onChange={set('name')} />
             {customerSlot}
@@ -62,13 +56,8 @@ export default function Calculator({ job, settings, onChange, actions, customerS
                 <div className="text-xs text-slate-500">Plošče skupaj: {num(r.printHours)} h · {num(job.plates.reduce((a, p) => a + p.grams, 0))} g (čas in grami celega naročila; število kosov se ne množi)</div>
               </div>
             ) : (<>
-            <div className="col-span-2 sm:col-span-3"><Check label="Vnesem skupen čas tiska za celo serijo" checked={job.useBatchTime} onChange={set('useBatchTime')} /></div>
-            {job.useBatchTime ? (<>
-              <TimeField label="Skupen čas tiska" minutes={job.batchHours * 60 + job.batchMinutes} onChange={(t) => onChange({ ...job, batchHours: Math.floor(t / 60), batchMinutes: t % 60 })} />
-            </>) : (<>
               <NumField label="Teža kosa" value={job.gramsPerPiece} onChange={set('gramsPerPiece')} suffix="g" />
               <TimeField label="Čas kosa" minutes={job.hoursPerPiece * 60 + job.minutesPerPiece} onChange={(t) => onChange({ ...job, hoursPerPiece: Math.floor(t / 60), minutesPerPiece: t % 60 })} />
-            </>)}
             </>)}
             {job.extraMaterialG > 0 && <NumField label="Dodatna poraba (stari vnos)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />}
             <NumField label="Potrošni material (drugo)" value={job.consumables} onChange={set('consumables')} suffix="€" />
@@ -112,8 +101,8 @@ export default function Calculator({ job, settings, onChange, actions, customerS
       <div className="space-y-4 lg:sticky lg:top-4 self-start">
         <div className="card">
           <div className="h2">Vse cene za ta posel</div>
-          <div className="grid grid-cols-2 gap-2 mt-2">{(() => { const t = allTiers(job, settings); return TIERS.map(([k, l, sub]) => (
-            <button key={k} onClick={() => set('mode')(k)} className={`text-left rounded-xl p-3 ring-1 ${k === 'poslovno' ? 'bg-emerald-50 dark:bg-emerald-500/10 ring-emerald-200 dark:ring-emerald-500/30' : 'bg-sky-50 dark:bg-sky-500/10 ring-sky-200 dark:ring-sky-500/30'} ${job.mode === k ? '!ring-2' : ''}`}>
+          <div className="grid grid-cols-2 gap-2 mt-2">{(() => { const t = allTiers(job, settings); return TIERS.filter(([k]) => k === 'osebno').map(([k, l, sub]) => (
+            <button key={k} className={`col-span-2 text-left rounded-xl p-3 ring-1 ${k === 'poslovno' ? 'bg-emerald-50 dark:bg-emerald-500/10 ring-emerald-200 dark:ring-emerald-500/30' : 'bg-sky-50 dark:bg-sky-500/10 ring-sky-200 dark:ring-sky-500/30'} ${job.mode === k ? '!ring-2' : ''}`}>
               <div className="text-sm font-semibold">{l}</div>
               <div className="text-2xl font-black tabular-nums">{eur(t[k].gross)}</div>
               <div className="text-xs text-slate-500 dark:text-slate-400">{sub}{showPrint && job.pieces > 1 ? ` · ${eur(t[k].perPiece)}/kos` : ''}</div>

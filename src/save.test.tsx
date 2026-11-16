@@ -67,3 +67,33 @@ describe('App: gumbi', () => {
     expect(ids.map((x) => x.length)).toEqual([1, 1, 1]); expect(new Set(ids.flat()).size).toBe(3)
   })
 })
+
+import { toPodroben, hasUnsaved, newProject } from './store'
+import { calculate } from './calc'
+import { demoJob } from './seed'
+describe('Podroben: brez Poslovno in brez skupnega časa serije', () => {
+  it('star projekt s skupnim časom → čas na kos, enak skupni čas tiska', () => {
+    const st = freshState()
+    const old = { ...demoJob(), mode: 'osebno' as const, pieces: 4, useBatchTime: true, batchHours: 10, batchMinutes: 30 }
+    const j = toPodroben(old)
+    expect(j.useBatchTime).toBe(false); expect(j.hoursPerPiece).toBeCloseTo(10.5 / 4)
+    expect(calculate(j, st.settings).printHours).toBeCloseTo(calculate(old, st.settings).printHours)
+  })
+  it('Poslovno → Osebno; nespremenjen job vrne isti objekt', () => {
+    const j = { ...demoJob(), mode: 'poslovno' as const, useBatchTime: false }
+    expect(toPodroben(j).mode).toBe('osebno')
+    const o = toPodroben(j); expect(toPodroben(o)).toBe(o)
+  })
+  it('odprt star Poslovno projekt ne šteje kot neshranjen', () => {
+    const st = freshState(); const p = newProject({ ...demoJob(), mode: 'poslovno' }, st.settings)
+    expect(hasUnsaved({ ...st, projects: [p], currentId: p.id, current: toPodroben(p.input) })).toBe(false)
+  })
+  it('UI: ni stikala Poslovno ne kljukice za skupen čas', async () => {
+    cleanup(); localStorage.clear()
+    const App = (await import('./App')).default
+    render(<App />); fireEvent.click(screen.getByText('Podroben'))
+    expect(screen.queryByText('Vnesem skupen čas tiska za celo serijo')).toBeNull()
+    expect(screen.queryAllByText(/^Poslovno/)).toHaveLength(0)
+    expect(screen.getAllByText(/Osebno/).length).toBeGreaterThan(0)
+  })
+})

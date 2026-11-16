@@ -115,11 +115,25 @@ export function usePersistentState() {
   return [state, setState] as const
 }
 
+/**
+ * Podroben brez Poslovno in brez skupnega časa serije: način je vedno Osebno,
+ * skupen čas serije se pretvori v čas na kos (skupaj / kosov). Vrne isti objekt, če ni sprememb.
+ */
+export function toPodroben(j: JobInput): JobInput {
+  if (j.mode === 'osebno' && !j.useBatchTime) return j
+  const o = { ...j, mode: 'osebno' as const }
+  if (o.useBatchTime) {
+    const h = (+o.batchHours || 0) + (+o.batchMinutes || 0) / 60
+    Object.assign(o, { useBatchTime: false, batchHours: 0, batchMinutes: 0 }, o.usePlates ? {} : { hoursPerPiece: h / (o.pieces > 0 ? o.pieces : 1), minutesPerPiece: 0 })
+  }
+  return o
+}
+
 /** Ali ima trenutni izračun neshranjene spremembe (glede na shranjen projekt ali prazen projekt) */
 export function hasUnsaved(st: AppState): boolean {
   const strip = (j: JobInput) => JSON.stringify({ ...j, date: '' })
   const p = st.projects.find((x) => x.id === st.currentId)
-  if (p) return strip(p.input) !== strip(st.current)
+  if (p) return strip(toPodroben(p.input)) !== strip(toPodroben(st.current))
   return strip(st.current) !== strip(blankJob(st.settings.rates)) && strip(st.current) !== strip(emptyJob(st.settings.rates))
 }
 

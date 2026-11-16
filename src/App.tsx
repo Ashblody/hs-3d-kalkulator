@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Calculator from './Calculator'
 import SettingsView from './SettingsView'
 import ProjectsView from './ProjectsView'
-import { duplicateProject, hasUnsaved, isRenamed, newProject, saveCurrent, startBlank, usePersistentState } from './store'
+import { duplicateProject, hasUnsaved, isRenamed, newProject, saveCurrent, startBlank, toPodroben, usePersistentState } from './store'
 import type { JobInput, Project, Settings } from './types'
 import Dashboard from './Dashboard'
 import Quote from './Quote'
@@ -40,6 +40,8 @@ export default function App() {
     } catch (e) { console.error(e); alert('Izvoz ni uspel.') }
   }
   const sync = useDriveSync(st, setSt, flash)
+  // Podroben: vedno Osebno, čas na kos (stari projekti s Poslovno / skupnim časom se pretvorijo ob odprtju)
+  useEffect(() => { if (toPodroben(st.current) !== st.current) setSt((s) => ({ ...s, current: toPodroben(s.current) })) }, [st.current])
   const project = st.projects.find((p) => p.id === st.currentId)
   const calcBase = project ? project.snapshot : st.settings
   const calcSettings = effSettings(st.current, { ...calcBase, rates: { ...calcBase.rates, roundTo: st.settings.rates.roundTo } })
