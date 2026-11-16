@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AppState } from './store'
+import { mergeStates } from './backup'
 import { AuthError, effectiveClientId, envClientId, hasValidToken, loadPrefs, payload, requestToken, savePrefs, signOut, syncOnce, tokenGetter, type SyncPrefs } from './gdrive'
 
 type Status = 'idle' | 'sync' | 'ok' | 'offline' | 'auth' | 'error'
 const labels: Record<Status, string> = { idle: 'Ni prijave', sync: 'Sinhroniziram …', ok: 'Sinhronizirano', offline: 'Brez povezave – sinhroniziram, ko bo spet na voljo', auth: 'Potrebna ponovna prijava', error: 'Napaka pri sinhronizaciji' }
+
+/** rezultat sinhronizacije združi v trenutno stanje (ne zamenja ga) */
+export const applySynced = (s: AppState, synced: AppState): AppState => ({ ...mergeStates(s, synced).state, current: s.current, currentId: s.currentId, dark: s.dark })
 
 /** Sinhronizacija z Google Drive (appDataFolder): ob zagonu pull+merge, ob spremembah push z zamikom */
 export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState) => void, flash: (m: string) => void) {
@@ -22,7 +26,8 @@ export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState)
     try {
       const res = await syncOnce(stRef.current, { fetch: (...a) => fetch(...a), getToken: tokenGetter(clientId) })
       lastPushed.current = payload(res.state)
-      if (res.remoteChanged) setSt((s) => ({ ...res.state, current: s.current, currentId: s.currentId, dark: s.dark }))
+      // združi v NAJNOVEJŠE lokalno stanje (med sinhronizacijo je lahko nastal nov projekt) – nič se ne izgubi
+      if (res.remoteChanged) setSt((s) => applySynced(s, res.state))
       const p = { ...loadPrefs(), signedIn: true, lastSync: new Date().toISOString() }; setPrefs(p); setStatus('ok')
       if (manual || res.remoteChanged) flash(res.remoteChanged ? `Iz Drive: ${res.added} novih, ${res.updated} posodobljenih` : 'Sinhronizirano')
     } catch (e) {

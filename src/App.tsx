@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Calculator from './Calculator'
 import SettingsView from './SettingsView'
 import ProjectsView from './ProjectsView'
-import { duplicateProject, hasUnsaved, newProject, startBlank, usePersistentState } from './store'
+import { duplicateProject, hasUnsaved, isRenamed, newProject, saveCurrent, startBlank, usePersistentState } from './store'
 import type { JobInput, Project, Settings } from './types'
 import Dashboard from './Dashboard'
 import Quote from './Quote'
@@ -45,14 +45,10 @@ export default function App() {
   const calcSettings = effSettings(st.current, { ...calcBase, rates: { ...calcBase.rates, roundTo: st.settings.rates.roundTo } })
   const custOf = (j: JobInput) => (st.customers ?? []).find((c) => c.id === j.customerId)
 
-  const save = () => {
-    if (project) {
-      setSt({ ...st, projects: st.projects.map((p) => (p.id === project.id ? { ...p, input: structuredClone(st.current), updatedAt: new Date().toISOString() } : p)) })
-    } else {
-      const p = newProject(st.current, st.settings)
-      setSt({ ...st, projects: [...st.projects, p], currentId: p.id })
-    }
-    flash('Projekt shranjen')
+  const save = (asNew = false) => {
+    const r = saveCurrent(st, asNew)
+    setSt((s) => (s === st ? r.state : saveCurrent(s, asNew).state))
+    flash(r.created ? `Shranjeno kot nov projekt: ${st.current.name || 'brez imena'}` : 'Projekt shranjen')
   }
   const open = (p: Project) => { setSt({ ...st, current: structuredClone(p.input), currentId: p.id }); setTab('kalk') }
   const copy = (p: Project) => {
@@ -61,7 +57,8 @@ export default function App() {
   }
   const actions = (
     <div className="card flex flex-wrap gap-2 no-print">
-      <button className="btn-p" onClick={save}>{project ? 'Shrani projekt' : 'Shrani kot nov projekt'}</button>
+      <button className="btn-p" onClick={() => save()}>{project && !isRenamed(st) ? `Shrani spremembe v »${project.input.name || 'brez imena'}«` : 'Shrani kot nov projekt'}</button>
+      {project && !isRenamed(st) && <button className="btn" onClick={() => save(true)}>Shrani kot nov projekt</button>}
       <button className="btn" title="Prazen projekt: vse ure, grami, čas tiska in km na 0, 1 kos, brez datoteke. Nastavitve, materiali in tiskalniki ostanejo." onClick={() => { if (!hasUnsaved(st) || window.confirm('Trenutni projekt ni shranjen. Začnem nov prazen projekt in zavržem spremembe?')) { setSt(startBlank(st)); flash('Nov prazen projekt') } }}>Nov projekt</button>
       {project && <button className="btn" onClick={() => copy(project)}>Podvoji projekt</button>}
       <button className="btn" onClick={async () => flash((await copyText(jobText(st.current, calcSettings))) ? 'Izračun kopiran' : 'Kopiranje ni uspelo')}>Kopiraj izračun</button>
@@ -88,6 +85,7 @@ export default function App() {
       <main className="max-w-6xl mx-auto p-4">
         {msg && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg z-20">{msg}</div>}
         {tab === 'kalk' && (<>
+          {project && <div className="text-sm font-semibold text-sky-700 dark:text-sky-300 mb-1" data-testid="editing">Urejaš shranjen projekt »{project.input.name || 'brez imena'}«. Za drug projekt pritisni Nov projekt.</div>}
           {project && <div className="text-xs text-slate-500 mb-2">Projekt uporablja cenik, shranjen {new Date(project.createdAt).toLocaleDateString('sl-SI')}. Spremembe splošnega cenika nanj ne vplivajo.</div>}
           <Calculator job={st.current} settings={calcSettings} onChange={(current) => setSt({ ...st, current })} actions={actions}
             customerSlot={<CustomerPicker customers={st.customers} value={st.current.customerId}

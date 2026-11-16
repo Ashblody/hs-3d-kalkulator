@@ -123,5 +123,23 @@ export function hasUnsaved(st: AppState): boolean {
   return strip(st.current) !== strip(blankJob(st.settings.rates)) && strip(st.current) !== strip(emptyJob(st.settings.rates))
 }
 
+/**
+ * Shrani trenutni izračun. Obstoječi projekt se posodobi SAMO, če je odprt (currentId) in ima isto ime.
+ * Drugačno ime ali asNew → vedno nov projekt z novim id (nikoli ne prepiše drugega projekta).
+ */
+export function saveCurrent(st: AppState, asNew = false): { state: AppState; created: boolean } {
+  const p = st.projects.find((x) => x.id === st.currentId)
+  if (p && !asNew && !isRenamed(st)) {
+    return { state: { ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, input: structuredClone(st.current), updatedAt: new Date().toISOString() } : x)) }, created: false }
+  }
+  const n = newProject(st.current, st.settings)
+  return { state: { ...st, projects: [...st.projects, n], currentId: n.id }, created: true }
+}
+/** ime v obrazcu se razlikuje od odprtega projekta → shranjevanje ustvari nov projekt */
+export const isRenamed = (st: AppState): boolean => {
+  const p = st.projects.find((x) => x.id === st.currentId)
+  return !!p && (p.input.name ?? '').trim() !== (st.current.name ?? '').trim()
+}
+
 /** Nov prazen projekt – nastavitve, materiali in tiskalniki ostanejo */
 export const startBlank = (st: AppState): AppState => ({ ...st, current: blankJob(st.settings.rates), currentId: null })
