@@ -22,7 +22,7 @@ export function readSlicerGcode(text: string): SlicerPreview {
   const singleNumber = (s: string | null) => s && /^\d+(?:\.\d+)?$/.test(s) ? Number(s) : null
   const perValues = perWeight?.split(/\s*,\s*/).filter(Boolean) ?? []
   const multipleWeights = perValues.length > 1
-  const grams = singleNumber(totalWeight) ?? (multipleWeights ? null : singleNumber(perWeight))
+  const grams = multipleWeights ? null : singleNumber(totalWeight) ?? singleNumber(perWeight)
   return {
     minutes: parsedTime !== null && parsedTime > 0 ? Math.ceil(parsedTime) : null,
     grams: grams !== null && Number.isFinite(grams) && grams > 0 ? grams : null,

@@ -2,7 +2,7 @@ import type { JobInput, Settings } from './types'
 import FloorBox from './FloorBox'
 import MaterialInfoCard from './MaterialInfoCard'
 import SlicerImport from './SlicerImportPanel'
-import { allTiers, TIERS, calculate, isV10, regularPerKg, isPrinting, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
+import { allTiers, TIERS, calculate, isV10, regularPerKg, isPrinting, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor, plateGrams } from './calc'
 import { eur, num } from './format'
 import { Big, Check, HoursField, NumField, Row, Section, Select, TextField, TimeField, Tip, TIPS } from './ui'
 import { BARE_WORK } from './duration'
@@ -44,20 +44,32 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             <div className="col-span-2 sm:col-span-3"><Check label="Vnos po ploščah iz slicerja (Bambu Studio / PrusaSlicer)" checked={job.usePlates} onChange={(v) => onChange({ ...job, usePlates: v, plates: v && !job.plates.length ? [{ hours: 0, minutes: 0, grams: 0, materialId: job.materialId }] : job.plates })} /></div>
             {job.usePlates ? (
               <div className="col-span-2 sm:col-span-3 space-y-2">
-                <SlicerImport materials={settings.materials} materialId={job.materialId} onAdd={(p) => onChange({ ...job, plates: job.plates.length === 1 && !job.plates[0].hours && !job.plates[0].minutes && !job.plates[0].grams ? [p] : [...job.plates, p] })} />
+                <SlicerImport materials={settings.materials} materialId={job.materialId} onAdd={(p) => onChange({ ...job, plates: job.plates.length === 1 && !job.plates[0].hours && !job.plates[0].minutes && !plateGrams(job.plates[0]) ? [p] : [...job.plates, p] })} />
                 {job.plates.map((p, i) => {
                   const setP = (patch: Partial<typeof p>) => onChange({ ...job, plates: job.plates.map((x, k) => (k === i ? { ...x, ...patch } : x)) })
                   return (
                     <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end rounded-xl bg-slate-50 dark:bg-slate-800/60 dark:ring-1 dark:ring-slate-700/60 p-2">
                       <div className="text-xs font-semibold self-center">Plošča {i + 1}</div>
                       <TimeField label="Čas tiska" minutes={p.hours * 60 + p.minutes} onChange={(t) => setP({ hours: Math.floor(t / 60), minutes: t % 60 })} />
-                      <NumField label="Grami" value={p.grams} onChange={(v) => setP({ grams: v })} suffix="g" />
-                      <div className="flex gap-1 items-end"><Select label="Material" value={p.materialId} onChange={(v) => setP({ materialId: v })} options={settings.materials.map((m) => [m.id, m.name])} />
+                      <NumField label="Model (grami)" value={p.grams} onChange={(v) => setP({ grams: v })} suffix="g" />
+                      <div className="flex gap-1 items-end"><Select label="Material modela" value={p.materialId} onChange={(v) => setP({ materialId: v })} options={settings.materials.map((m) => [m.id, m.name])} />
                         <button className="btn !px-2" title="Odstrani ploščo" onClick={() => onChange({ ...job, plates: job.plates.filter((_, k) => k !== i) })}>×</button></div>
+                      <div className="col-span-2 sm:col-span-5 space-y-2">
+                        {(p.additionalMaterials ?? []).map((m, k) => {
+                          const update = (patch: Partial<typeof m>) => setP({ additionalMaterials: (p.additionalMaterials ?? []).map((x, n) => n === k ? { ...x, ...patch } : x) })
+                          return <div key={k} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                            <Select label="Namen" value={m.role} onChange={(role) => update({ role })} options={[[ 'support', 'Podpora' ], [ 'interface', 'Podporni vmesnik' ], [ 'other', 'Drugi material / odpad' ]]} />
+                            <Select label="Material" value={m.materialId} onChange={(materialId) => update({ materialId })} options={settings.materials.map(x => [x.id, x.name])} />
+                            <NumField label="Poraba" value={m.grams} onChange={(grams) => update({ grams })} suffix="g" />
+                            <button className="btn" onClick={() => setP({ additionalMaterials: (p.additionalMaterials ?? []).filter((_, n) => n !== k) })}>Odstrani material</button>
+                          </div>
+                        })}
+                        <button className="btn" onClick={() => setP({ additionalMaterials: [...(p.additionalMaterials ?? []), { role: 'support', materialId: p.materialId, grams: 0 }] })}>+ Podpora ali dodatni material</button>
+                      </div>
                     </div>)
                 })}
                 <button className="btn" onClick={() => onChange({ ...job, plates: [...job.plates, { hours: 0, minutes: 0, grams: 0, materialId: job.materialId }] })}>+ Dodaj ploščo</button>
-                <div className="text-xs text-slate-500">Plošče skupaj: {num(r.printHours)} h · {num(job.plates.reduce((a, p) => a + p.grams, 0))} g (čas in grami celega naročila; število kosov se ne množi)</div>
+                <div className="text-xs text-slate-500">Plošče skupaj: {num(r.printHours)} h · {num(job.plates.reduce((a, p) => a + plateGrams(p), 0))} g (čas in grami celega naročila; število kosov se ne množi)</div>
               </div>
             ) : (<>
               <NumField label="Teža kosa" value={job.gramsPerPiece} onChange={set('gramsPerPiece')} suffix="g" />

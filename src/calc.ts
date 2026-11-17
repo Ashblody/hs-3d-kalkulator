@@ -15,6 +15,7 @@ export const isV10 = (s: Settings) => s.rates.marginPct !== undefined
 export const legacyPricing = (s: Settings): Settings => { const rates = { ...s.rates }; delete rates.marginPct; delete rates.wastePct; return { ...s, rates } }
 export const wearPerHour = (p: Printer) => (p.lifeHours > 0 ? (p.price + p.service) / p.lifeHours : 0)
 export const powerFor = (p: Printer, materialType: string) => p.powerW[materialType] ?? p.powerW.default ?? 0
+export const plateGrams = (p: import('./types').Plate) => nz(p.grams) + (p.additionalMaterials ?? []).reduce((sum, m) => sum + nz(m.grams), 0)
 
 /** Cenik stranke ima prednost pred tiskalnikom; stari podatki uporabijo splošni cenik. */
 export function printRateFor(j: JobInput, s: Settings): number {
@@ -88,7 +89,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const plates = j.usePlates ? (j.plates ?? []) : []
   const v10 = isV10(s)
   const wastePct = v10 ? nz(s.rates.wastePct ?? 0) : 0, wf = 1 + wastePct / 100
-  const kg0 = ((j.usePlates ? plates.reduce((a, p) => a + nz(p.grams), 0) : nz(j.pieces) * nz(j.gramsPerPiece)) + nz(j.extraMaterialG)) / 1000
+  const kg0 = ((j.usePlates ? plates.reduce((a, p) => a + plateGrams(p), 0) : nz(j.pieces) * nz(j.gramsPerPiece)) + nz(j.extraMaterialG)) / 1000
   const kg = kg0 * wf, wasteG = (kg - kg0) * 1000
   const powerW = printer && mat ? powerFor(printer, mat.type) : 0
 
@@ -96,7 +97,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const matCost = (per: (m: Material) => number) => {
     const priceOf = (id: string) => { const m = s.materials.find((x) => x.id === id) ?? mat; return m ? per(m) : 0 }
     return j.usePlates
-      ? (plates.reduce((a, p) => a + (nz(p.grams) / 1000) * priceOf(p.materialId), 0) + (nz(j.extraMaterialG) / 1000) * (mat ? per(mat) : 0)) * wf
+      ? (plates.reduce((a, p) => a + (nz(p.grams) / 1000) * priceOf(p.materialId) + (p.additionalMaterials ?? []).reduce((sum, m) => sum + (nz(m.grams) / 1000) * priceOf(m.materialId), 0), 0) + (nz(j.extraMaterialG) / 1000) * (mat ? per(mat) : 0)) * wf
       : mat ? kg * per(mat) : 0
   }
   const material = matCost(pricePerKg)
@@ -107,7 +108,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const consumables = nz(j.consumables)
   const otherDirect = nz(j.otherDirect)
   // lepilo: najdražje med uporabljenimi materiali × število tiskov (plošč)
-  const usedMats = j.usePlates ? [...new Set([j.materialId, ...plates.map((p) => p.materialId)])].map((id) => s.materials.find((m) => m.id === id)) : [mat]
+  const usedMats = j.usePlates ? [...new Set([j.materialId, ...plates.flatMap((p) => [p.materialId, ...(p.additionalMaterials ?? []).filter(m => nz(m.grams) > 0).map(m => m.materialId)])])].map((id) => s.materials.find((m) => m.id === id)) : [mat]
   const adhesiveMat = usedMats.reduce<typeof mat>((best, m) => (m && nz(m.adhesive ?? 0) > nz(best?.adhesive ?? 0) ? m : best), undefined)
   const adhesive = printHours > 0 || kg > 0 ? nz(adhesiveMat?.adhesive ?? 0) * (j.usePlates ? Math.max(1, plates.length) : 1) : 0
   const adhesiveLabel = adhesiveMat && adhesive > 0 ? adhesiveMat.type : ''

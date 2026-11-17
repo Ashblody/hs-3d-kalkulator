@@ -3,7 +3,10 @@ export type Mode = 'osebno' | 'poslovno'
 export type OrderType = 'tisk' | 'sken' | 'cad' | 'kombinirano' | 'digitalno'
 export type Status = 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano' | 'opravljeno'
 /** plošča iz slicerja (Bambu Studio / PrusaSlicer) */
-export interface Plate { hours: number; minutes: number; grams: number; materialId: string }
+export type MaterialRole = 'support' | 'interface' | 'other'
+export interface PlateMaterial { role: MaterialRole; grams: number; materialId: string }
+/** Stari vnosi ostajajo veljavni: dodatne porabe niso obvezne. */
+export interface Plate { hours: number; minutes: number; grams: number; materialId: string; additionalMaterials?: PlateMaterial[] }
 
 export interface Printer {
   id: string
