@@ -1,6 +1,7 @@
 import type { JobInput, Settings } from './types'
 import FloorBox from './FloorBox'
 import MaterialInfoCard from './MaterialInfoCard'
+import SlicerImport from './SlicerImportPanel'
 import { allTiers, TIERS, calculate, isV10, regularPerKg, isPrinting, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
 import { eur, num } from './format'
 import { Big, Check, HoursField, NumField, Row, Section, Select, TextField, TimeField, Tip, TIPS } from './ui'
@@ -43,6 +44,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             <div className="col-span-2 sm:col-span-3"><Check label="Vnos po ploščah iz slicerja (Bambu Studio / PrusaSlicer)" checked={job.usePlates} onChange={(v) => onChange({ ...job, usePlates: v, plates: v && !job.plates.length ? [{ hours: 0, minutes: 0, grams: 0, materialId: job.materialId }] : job.plates })} /></div>
             {job.usePlates ? (
               <div className="col-span-2 sm:col-span-3 space-y-2">
+                <SlicerImport materials={settings.materials} materialId={job.materialId} onAdd={(p) => onChange({ ...job, plates: job.plates.length === 1 && !job.plates[0].hours && !job.plates[0].minutes && !job.plates[0].grams ? [p] : [...job.plates, p] })} />
                 {job.plates.map((p, i) => {
                   const setP = (patch: Partial<typeof p>) => onChange({ ...job, plates: job.plates.map((x, k) => (k === i ? { ...x, ...patch } : x)) })
                   return (
