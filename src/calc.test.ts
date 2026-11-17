@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculate, fileSaleInfo, markupToMargin, r2, totalPrintHours, wearPerHour } from './calc'
+import { calculate, fileSaleInfo, markupToMargin, pricePerKg, r2, totalPrintHours, wearPerHour } from './calc'
 import { defaultSettings, demoJob , emptyJob } from './seed'
 
 /** brez zaokroževanja – za preverjanje točnih zneskov */
@@ -227,5 +227,16 @@ describe('v7: Osebno / Poslovno', () => {
     const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, defaultSettings())
     console.log('V7', JSON.stringify({ osebno: t.osebno.net, poslovno: t.poslovno.net, strosek: r2(t.osebno.realCosts), dobicekO: r2(t.osebno.profit), dobicekP: r2(t.poslovno.profit) }))
     expect(t.osebno.net).toBe(154); expect(t.poslovno.net).toBe(308)
+  })
+})
+
+describe('Trček PC-ABS V0 in ASA-CF', () => {
+  it('cene s strani in migracija k obstoječim podatkom', () => {
+    const pc = materialsV2.find((m) => m.id === 'tr2-pcabs')!, cf = materialsV2.find((m) => m.id === 'tr2-asacf')!
+    expect([pc.spoolG, pc.prices.map((p) => p.price), r2(pricePerKg(pc))]).toEqual([1000, [39.98, 31.98], 39.98])
+    expect([cf.spoolG, cf.prices.map((p) => p.price), r2(pricePerKg(cf))]).toEqual([800, [27.89, 23.71], 34.86])
+    const old = defaultSettings(); old.materials = old.materials.filter((m) => !['tr2-pcabs', 'tr2-asacf'].includes(m.id)); old.materialSeeds = old.materialSeeds!.filter((id) => !['tr2-pcabs', 'tr2-asacf'].includes(id))
+    const st = normalize({ ...initialState(), settings: old })
+    expect(st.settings.materials.filter((m) => m.id === 'tr2-pcabs' || m.id === 'tr2-asacf').map((m) => m.adhesive)).toEqual([0.5, 0.5])
   })
 })
