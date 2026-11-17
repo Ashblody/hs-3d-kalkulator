@@ -8,7 +8,28 @@ const API = 'https://www.googleapis.com/drive/v3/files'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files'
 
 export class AuthError extends Error { constructor() { super('auth') } }
+/** Brez skupne osnovne različice ni mogoče varno določiti, katera nastavitev je novejša. */
+export class SettingsConflictError extends Error {
+  constructor(public readonly count: number) { super('settings_conflict') }
+}
 export interface DriveCtx { fetch: typeof fetch; getToken: (force?: boolean) => Promise<string> }
+
+const canonical = (value: unknown): string => {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (value && typeof value === 'object') {
+    const o = value as Record<string, unknown>
+    return `{${Object.keys(o).filter(k => o[k] !== undefined).sort().map(k => `${JSON.stringify(k)}:${canonical(o[k])}`).join(',')}}`
+  }
+  return JSON.stringify(value) ?? 'null'
+}
+/** Različni vnosi z istim ID bi pri običajnem združevanju izgubili eno stran. */
+export function conflictingSettings(local: AppState, remote: AppState): number {
+  const conflicts = <T extends { id: string }>(a: T[], b: T[]) => {
+    const byId = new Map(a.map(x => [x.id, x]))
+    return b.filter(x => { const other = byId.get(x.id); return other && canonical(other) !== canonical(x) }).length
+  }
+  return conflicts(local.settings.materials, remote.settings.materials) + conflicts(local.settings.printers, remote.settings.printers)
+}
 
 /** klic z avtomatsko obnovo žetona ob 401 (en ponovni poskus) */
 async function call(ctx: DriveCtx, url: string, init: RequestInit = {}): Promise<Response> {
@@ -51,10 +72,12 @@ export async function syncOnce(local: AppState, ctx: DriveCtx): Promise<{ state:
   if (id) {
     const raw = await download(ctx, id) as Partial<AppState>
     const remote = normalize({ ...raw, current: local.current })
+    const conflicts = conflictingSettings(local, remote)
+    if (conflicts) throw new SettingsConflictError(conflicts)
     const m = mergeStates(local, remote); state = m.state; added = m.added; updated = m.updated
   }
   await upload(ctx, id, payload(state))
-  return { state, added, updated, remoteChanged: added + updated > 0 }
+  return { state, added, updated, remoteChanged: payload(state) !== payload(local) }
 }
 
 /* ---------- Google Identity Services ---------- */

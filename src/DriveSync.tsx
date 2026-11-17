@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AppState } from './store'
 import { mergeStates } from './backup'
-import { AuthError, effectiveClientId, envClientId, hasValidToken, loadPrefs, payload, requestToken, savePrefs, signOut, syncOnce, tokenGetter, type SyncPrefs } from './gdrive'
+import { AuthError, SettingsConflictError, effectiveClientId, envClientId, hasValidToken, loadPrefs, payload, requestToken, savePrefs, signOut, syncOnce, tokenGetter, type SyncPrefs } from './gdrive'
 
-type Status = 'idle' | 'sync' | 'ok' | 'offline' | 'auth' | 'error'
-const labels: Record<Status, string> = { idle: 'Ni prijave', sync: 'Sinhroniziram …', ok: 'Sinhronizirano', offline: 'Brez povezave – sinhroniziram, ko bo spet na voljo', auth: 'Potrebna ponovna prijava', error: 'Napaka pri sinhronizaciji' }
+type Status = 'idle' | 'sync' | 'ok' | 'offline' | 'auth' | 'error' | 'conflict'
+const labels: Record<Status, string> = { idle: 'Ni prijave', sync: 'Sinhroniziram …', ok: 'Sinhronizirano', offline: 'Brez povezave – sinhroniziram, ko bo spet na voljo', auth: 'Potrebna ponovna prijava', error: 'Napaka pri sinhronizaciji', conflict: 'Sinhronizacija ustavljena: različni podatki o materialih ali tiskalnikih' }
 
 /** rezultat sinhronizacije združi v trenutno stanje (ne zamenja ga) */
 export const applySynced = (s: AppState, synced: AppState): AppState => ({ ...mergeStates(s, synced).state, current: s.current, currentId: s.currentId, dark: s.dark })
@@ -29,9 +29,9 @@ export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState)
       // združi v NAJNOVEJŠE lokalno stanje (med sinhronizacijo je lahko nastal nov projekt) – nič se ne izgubi
       if (res.remoteChanged) setSt((s) => applySynced(s, res.state))
       const p = { ...loadPrefs(), signedIn: true, lastSync: new Date().toISOString() }; setPrefs(p); setStatus('ok')
-      if (manual || res.remoteChanged) flash(res.remoteChanged ? `Iz Drive: ${res.added} novih, ${res.updated} posodobljenih` : 'Sinhronizirano')
+      if (manual || res.remoteChanged) flash(res.remoteChanged ? `Podatki z Drive združeni: ${res.added} novih projektov, ${res.updated} posodobljenih` : 'Sinhronizirano')
     } catch (e) {
-      setStatus(e instanceof AuthError ? 'auth' : !navigator.onLine || e instanceof TypeError ? 'offline' : 'error')
+      setStatus(e instanceof SettingsConflictError ? 'conflict' : e instanceof AuthError ? 'auth' : !navigator.onLine || e instanceof TypeError ? 'offline' : 'error')
     } finally { busy.current = false }
   }, [clientId])
 
@@ -74,7 +74,8 @@ export function DriveSyncCard({ sync }: { sync: ReturnType<typeof useDriveSync> 
           onChange={(e) => setCid(e.target.value)} onBlur={() => setPrefs({ ...loadPrefs(), clientId: cid.trim() })} /></label>
       <div className="text-sm mt-2"><span className={status === 'ok' ? 'text-emerald-600' : status === 'error' || status === 'auth' ? 'text-red-500' : 'text-slate-500'} data-testid="sync-status">{labels[status]}</span>
         <span className="text-slate-500"> · zadnja sinhronizacija: {prefs.lastSync ? new Date(prefs.lastSync).toLocaleString('sl-SI') : '—'}</span></div>
-      <p className="text-xs text-slate-500 mt-2">Podatki se shranijo v skrito mapo aplikacije na tvojem Google Drivu (datoteka hs3d-kopija.json). Ob zagonu se prenesejo in združijo (novejše zmaga), spremembe se naložijo samodejno. Na drugi napravi se prijavi z istim Google računom.</p>
+      {status === 'conflict' && <p role="alert" className="text-sm text-amber-700 dark:text-amber-300 mt-2">Podatki na napravah se razlikujejo. Nič ni bilo naloženo na Drive. Na vsaki napravi izvozi JSON-kopijo in primerjaj vnose; do uskladitve uporabljaj lokalne podatke.</p>}
+      <p className="text-xs text-slate-500 mt-2">Podatki se shranijo v skrito mapo aplikacije na tvojem Google Drivu (datoteka hs3d-kopija.json). Projekti se združijo po času spremembe; različni materiali ali tiskalniki z enakim ID ustavijo sinhronizacijo. Cenik ostane lokalen. Na drugi napravi se prijavi z istim Google računom.</p>
     </div>
   )
 }

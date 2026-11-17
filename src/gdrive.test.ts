@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) })
 import { initialState, newProject } from './store'
-import { syncOnce, FILE_NAME, AuthError, type DriveCtx } from './gdrive'
+import { syncOnce, FILE_NAME, AuthError, SettingsConflictError, type DriveCtx } from './gdrive'
 import { mergeStates } from './backup'
 import { demoJob } from './seed'
 
@@ -30,6 +30,30 @@ function fakeDrive(initial?: unknown, opts: { expireFirst?: boolean; alwaysAuthF
 }
 
 describe('Google Drive sinhronizacija', () => {
+  it('različnih nastavitev istega materiala ne prepiše na Drivu', async () => {
+    const local = initialState(), remote = structuredClone(local)
+    local.settings.materials[0].details = { experience: 'telefon' }
+    remote.settings.materials[0].details = { experience: 'računalnik' }
+    const before = JSON.stringify(remote), d = fakeDrive(remote)
+    await expect(syncOnce(local, d.ctx)).rejects.toBeInstanceOf(SettingsConflictError)
+    expect(d.file!.body).toBe(before)
+    expect(d.calls.some(c => c.startsWith('PATCH'))).toBe(false)
+    expect(local.settings.materials[0].details?.experience).toBe('telefon')
+  })
+  it('nov material z Driva označi kot spremembo za prikaz na napravi', async () => {
+    const local = initialState(), remote = structuredClone(local)
+    remote.settings.materials.push({ ...remote.settings.materials[0], id: 'dodaten-material', name: 'Testni material' })
+    const result = await syncOnce(local, fakeDrive(remote).ctx)
+    expect(result.remoteChanged).toBe(true)
+    expect(result.state.settings.materials.some(m => m.id === 'dodaten-material')).toBe(true)
+  })
+  it('različne nastavitve tiskalnika ustavijo nalaganje', async () => {
+    const local = initialState(), remote = structuredClone(local)
+    remote.settings.printers[0].printHourly = 9
+    const d = fakeDrive(remote)
+    await expect(syncOnce(local, d.ctx)).rejects.toBeInstanceOf(SettingsConflictError)
+    expect(d.calls.some(c => c.startsWith('PATCH'))).toBe(false)
+  })
   it('prvič: ustvari hs3d-kopija.json v appDataFolder', async () => {
     const d = fakeDrive(); const s = initialState()
     const r = await syncOnce(s, d.ctx)
