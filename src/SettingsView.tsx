@@ -86,6 +86,22 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
                 <NumField label="Lepilo (0 = brez)" value={m.adhesive ?? 0} onChange={(adhesive) => setM(i, { adhesive })} suffix="€/tisk" />
               </div>
               <MaterialInfoCard id={m.id} className="mt-2" />
+              <details className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                <summary className="cursor-pointer font-medium">Lastni tehnični podatki in izkušnje</summary>
+                <p className="text-xs text-slate-500 mt-2">Vnesi samo znane podatke. Proizvajalčeve navedbe podpri z virom; ocene in lastne izkušnje so ločene. Ta polja ne spreminjajo izračuna cene.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  {([
+                    ['density', 'Gostota (npr. g/cm³)'], ['nozzleTemp', 'Temperatura šobe'],
+                    ['bedTemp', 'Temperatura podlage'], ['chamberTemp', 'Temperatura komore'],
+                    ['nozzleType', 'Priporočena šoba'], ['difficulty', 'Zahtevnost tiskanja'],
+                    ['drying', 'Sušenje'], ['resistance', 'Temperaturna, UV in mehanska odpornost'],
+                    ['applications', 'Področja uporabe'], ['manufacturerSource', 'Vir proizvajalčevih podatkov (povezava)'],
+                    ['estimates', 'Ocene in njihovi viri'], ['experience', 'Moje izkušnje'],
+                  ] as const).map(([key, label]) => (
+                    <TextField key={key} label={label} value={m.details?.[key] ?? ''} onChange={(value) => setM(i, { details: { ...m.details, [key]: value } })} />
+                  ))}
+                </div>
+              </details>
               <div className="mt-2 space-y-2">
                 {m.prices.map((pr, k) => (
                   <div key={k} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-end">

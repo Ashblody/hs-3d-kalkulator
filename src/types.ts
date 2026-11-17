@@ -17,6 +17,21 @@ export interface Printer {
 }
 
 export interface MaterialPrice { label: string; price: number }
+/** Neobvezni podatki: brez privzetih vrednosti, vir in osebne ocene so ločeni. */
+export interface MaterialDetails {
+  density?: string
+  nozzleTemp?: string
+  bedTemp?: string
+  chamberTemp?: string
+  nozzleType?: string
+  difficulty?: string
+  drying?: string
+  resistance?: string
+  applications?: string
+  manufacturerSource?: string
+  estimates?: string
+  experience?: string
+}
 export interface Material {
   id: string
   name: string
@@ -29,6 +44,7 @@ export interface Material {
   /** lepilo za podlago: € na tisk (0 = brez, npr. PLA/PETG) */
   adhesive?: number
   source?: string
+  details?: MaterialDetails
 }
 
 export interface Rates {
