@@ -5,12 +5,14 @@ import { type Period, localYM, monthLabel, shiftMonth, periodProjects, fixedMont
 import { calculate, monthlyPlan } from './calc'
 import { eur, num } from './format'
 import { Big, Row } from './ui'
+import { businessInsights } from './businessInsights'
 
 export default function Dashboard({ projects, settings }: { projects: Project[]; settings: Settings }) {
   const [period, setPeriod] = useState<Period>({ kind: 'month', ym: localYM() })
   const isYear = period.kind === 'year'
   const inMonth = periodProjects(projects, period)
   const nMonths = fixedMonths(period)
+  const insight = businessInsights(inMonth)
   const b = settings.business
   const fixed = b.monthlyFixed * nMonths
   let revenue = 0, costs = 0, hours = 0, tax = 0
@@ -47,10 +49,25 @@ export default function Dashboard({ projects, settings }: { projects: Project[];
       <div className="text-sm text-slate-500">{isYear ? `Celo leto ${period.year}` : `Mesec ${label}`} · upoštevani projekti s statusom sprejeto, natisnjeno, plačano ali opravljeno ({inMonth.length}){isYear && ` · fiksni stroški: ${eur(b.monthlyFixed)} × ${nMonths} mes. (${period.year === new Date().getFullYear() ? 'od januarja do vključno tega meseca' : 'celo leto'})`}</div>
       {inMonth.length === 0 && <div className="card text-sm text-orange-700 dark:text-orange-300">{isYear ? `V letu ${period.year} še ni` : 'V tem mesecu ni'} projektov s statusom Sprejeto, Natisnjeno, Plačano ali Opravljeno, zato so prihodki 0. V zavihku Projekti nastavi status (ponudbe se ne štejejo).{b.monthlyFixed > 0 ? '' : ' Prispevki so 0 €, zato je rezultat 0 €.'}</div>}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Big label="Prihodki" value={eur(revenue)} />
+        <Big label="Ocenjena vrednost projektov" value={eur(revenue)} />
         <Big label="Stroški + fiksni + davek" value={eur(costs + fixed + tax)} tone="slate" />
         <Big label="Predvideni rezultat" value={eur(result)} tone={result >= 0 ? 'green' : 'red'} />
         <Big label="Obračunljive ure" value={`${num(hours)} / ${num(b.billableHours * nMonths)} h`} tone="slate" sub={hours > 0 ? `${eur(result / hours)}/h` : undefined} />
+      </div>
+      <div className="card text-sm space-y-2">
+        <div className="h2">Dejanski vnosi in plačila</div>
+        <Row l="Vrednost projektov s statusom Plačano" v={eur(insight.paidValue)} />
+        <Row l={`Vneseno dejansko delo (${insight.actualWorkCount} projektov)`} v={`${num(insight.actualWork)} h`} />
+        <Row l={`Vnesen dejanski tisk (${insight.actualPrintCount} projektov)`} v={`${num(insight.actualPrint)} h`} />
+        <Row l={`Vnesen dejanski material (${insight.actualMaterialCount} projektov)`} v={`${num(insight.actualGrams)} g`} />
+        <p className="text-xs text-slate-500">Plačana vrednost je iz ocen projektov glede na njihov datum, ne evidenca dejanskih plačil ali denarnega toka. Dejanski vnosi so samo za projekte, kjer so podatki vneseni.</p>
+      </div>
+      <div className="card text-sm space-y-2">
+        <div className="h2">Tiskalniki in materiali – ocena</div>
+        {insight.printers.map(p => <Row key={p.id} l={`${p.name}: ${p.projects} projektov · ${num(p.hours)} h`} v={`${eur(p.cost)} stroškov tiska`} />)}
+        {insight.materials.map(m => <Row key={m.id} l={m.name} v={`${num(m.grams)} g`} />)}
+        {!insight.printers.length && <p className="text-slate-500">V tem obdobju ni projektov s tiskom.</p>}
+        <p className="text-xs text-slate-500">Količine so ocenjene in vključujejo nastavljen odstotek odpada. Dejanska poraba po posameznih materialih še ni evidentirana.</p>
       </div>
       <div className="card"><div className="h2">{label}</div>
         <div className="h-64"><ResponsiveContainer><BarChart data={data}><XAxis dataKey="name" fontSize={12} /><YAxis fontSize={11} /><Tooltip formatter={(v: number) => eur(v)} /><Bar dataKey="v">{data.map((d) => <Cell key={d.name} fill={d.c} />)}</Bar></BarChart></ResponsiveContainer></div>
