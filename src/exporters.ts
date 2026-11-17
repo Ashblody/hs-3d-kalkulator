@@ -32,10 +32,17 @@ export async function buildPdf(job: JobInput, settings: Settings, id: string, cu
   doc.setFont('DV', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139); doc.text('3D-tisk · 3D-skeniranje · CAD-modeliranje', L, 30)
   doc.setTextColor(15, 23, 42); doc.setFont('DV', 'bold'); doc.setFontSize(15); doc.text('PONUDBA', R, 20, { align: 'right' })
   doc.setFont('DV', 'normal'); doc.setFontSize(9)
-  doc.text([`št. ${quoteNumber(job, id)}`, `Datum: ${new Date(job.date).toLocaleDateString('sl-SI')}`, 'Veljavnost: 15 dni'], R, 26, { align: 'right' })
+  doc.text([`št. ${quoteNumber(job, id)}`, `Datum: ${job.date ? new Date(job.date).toLocaleDateString('sl-SI') : 'ni naveden'}`, job.quoteTerms?.validUntil ? `Velja do: ${new Date(job.quoteTerms.validUntil).toLocaleDateString('sl-SI')}` : 'Veljavnost: 15 dni'], R, 26, { align: 'right' })
   doc.setDrawColor(5, 150, 105); doc.setLineWidth(1.2); doc.line(L, 38, R, 38)
   let y = 47
   const label = (t: string) => { doc.setFontSize(8); doc.setTextColor(100, 116, 139); doc.text(t.toUpperCase(), L, y); y += 5; doc.setTextColor(15, 23, 42); doc.setFontSize(11) }
+  const issuer = settings.issuer
+  const issuerLines = [issuer?.name, issuer?.address, issuer?.contact, issuer?.taxId ? `Davčna številka: ${issuer.taxId}` : ''].filter((x): x is string => !!x)
+  if (issuerLines.length) {
+    label('Izdajatelj'); doc.setFont('DV', 'normal'); doc.setFontSize(9)
+    for (const text of issuerLines) { const lines = doc.splitTextToSize(text, R - L); doc.text(lines, L, y); y += lines.length * 4.5 }
+    y += 3
+  }
   label('Naročnik'); doc.setFont('DV', 'bold'); doc.text(customer?.name || job.client || '—', L, y); y += 5
   doc.setFont('DV', 'normal'); doc.setFontSize(9)
   const contact = [customer?.phone, customer?.email].filter(Boolean).join(' · ')
@@ -60,8 +67,12 @@ export async function buildPdf(job: JobInput, settings: Settings, id: string, cu
   doc.setFont('DV', 'bold'); doc.setFontSize(13); doc.text('ZA PLAČILO', 120, y); doc.text(eurPdf(r.gross), R - 2, y, { align: 'right' }); y += 5
   doc.setFont('DV', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139); doc.text(`${eurPdf(r.perPiece)} na kos · ${modeLabel}`, R - 2, y, { align: 'right' }); y += 12
   doc.setTextColor(15, 23, 42)
+  if (y > 255) { doc.addPage(); y = 20 }
   if (!settings.business.vatEnabled) { doc.text('DDV v izračunu ni vključen.', L, y); y += 5 }
-  doc.text(`Digitalne pravice: ${rights}.`, L, y)
+  for (const text of [job.quoteTerms?.delivery ? `Predviden rok: ${job.quoteTerms.delivery}` : '', job.quoteTerms?.terms ? `Pogoji: ${job.quoteTerms.terms}` : '', `Digitalne pravice: ${rights}.`].filter(Boolean)) {
+    const lines = doc.splitTextToSize(text, R - L)
+    for (const line of lines) { if (y > 275) { doc.addPage(); y = 20 }; doc.text(line, L, y); y += 4.5 }
+  }
   return doc.output('blob')
 }
 
@@ -70,7 +81,7 @@ export async function buildXlsx(job: JobInput, settings: Settings, id: string, c
   const { r, lines, totals, rights, modeLabel } = quoteData(job, settings)
   const r2 = (x: number) => Math.round(x * 100) / 100
   const ponudba: (string | number)[][] = [
-    ['HS 3D – ponudba', quoteNumber(job, id)], ['Datum', job.date], ['Naročnik', customer?.name || job.client || ''], ['Kontakt', [customer?.phone, customer?.email].filter(Boolean).join(' · ')], ['Projekt', job.name], ['Opis', job.description || ''], ['Način', modeLabel], [],
+    ['HS 3D – ponudba', quoteNumber(job, id)], ['Izdajatelj', settings.issuer?.name ?? ''], ['Naslov', settings.issuer?.address ?? ''], ['Kontakt izdajatelja', settings.issuer?.contact ?? ''], ['Davčna številka', settings.issuer?.taxId ?? ''], ['Datum', job.date], ['Naročnik', customer?.name || job.client || ''], ['Kontakt', [customer?.phone, customer?.email].filter(Boolean).join(' · ')], ['Projekt', job.name], ['Opis', job.description || ''], ['Način', modeLabel], ['Rok izdelave', job.quoteTerms?.delivery ?? ''], ['Velja do', job.quoteTerms?.validUntil ?? ''], ['Pogoji', job.quoteTerms?.terms ?? ''], [],
     ['Postavka', 'Obseg', 'Znesek €'], ...lines.map(([l, d, v]) => [l, d, r2(v)]), [],
     ...totals.map(([l, v]) => [l, '', r2(v)]), ['ZA PLAČILO', '', r2(r.gross)], ['Na kos', '', r2(r.perPiece)], [], ['Digitalne pravice', rights],
   ]

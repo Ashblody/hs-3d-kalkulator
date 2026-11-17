@@ -102,6 +102,7 @@ export interface JobInput {
   client: string
   date: string
   description: string
+  quoteTerms?: { delivery?: string; validUntil?: string; terms?: string }
   mode: Mode
   orderType: OrderType
   /** ali posel vsebuje 3D-tisk; manjka = da (stari projekti). Brez tiska: samo storitve (sken, modeliranje …) */
@@ -153,7 +154,8 @@ export interface JobInput {
   rights: { physicalOnly: boolean; personalUse: boolean; commercial: boolean; sourceCad: boolean }
 }
 
-export interface Settings { printers: Printer[]; materials: Material[]; materialSeeds?: string[]; ratesVersion?: number; rates: Rates; business: Business }
+export interface Issuer { name?: string; address?: string; contact?: string; taxId?: string }
+export interface Settings { printers: Printer[]; materials: Material[]; materialSeeds?: string[]; ratesVersion?: number; rates: Rates; business: Business; issuer?: Issuer }
 
 export interface Customer { id: string; name: string; phone?: string; email?: string; note?: string; createdAt: string; updatedAt?: string; pricing?: CustomerPricing }
 /** ročno popravljen cenik stranke – ima prednost pred zadnjim projektom */

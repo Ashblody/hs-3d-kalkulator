@@ -14,6 +14,13 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
 
   return (
     <div className="space-y-4">
+      <details className="card">
+        <summary className="cursor-pointer font-semibold">Podatki izdajatelja ponudbe</summary>
+        <p className="text-xs text-slate-500 mt-2">Vpiši le podatke, ki jih želiš prikazati. Prazna polja na ponudbi niso izpisana.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+          {([['name', 'Ime ali naziv'], ['address', 'Naslov'], ['contact', 'Kontakt'], ['taxId', 'Davčna številka (če jo želiš navesti)']] as const).map(([key, label]) => <TextField key={key} label={label} value={s.issuer?.[key] ?? ''} onChange={value => onChange({ ...s, issuer: { ...s.issuer, [key]: value } })} />)}
+        </div>
+      </details>
       <details className="card" open>
         <summary className="cursor-pointer font-semibold">Cenik storitev</summary>
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -26,7 +26,7 @@ export default function App() {
   const [msg, setMsg] = useState('')
   const [quote, setQuote] = useState<{ job: JobInput; settings: Settings; number: string } | null>(null)
   const printQuote = (job: JobInput, settings: Settings, id: string) => {
-    setQuote({ job, settings, number: `${job.date.replace(/-/g, '')}-${id.slice(0, 4).toUpperCase()}` })
+    setQuote({ job, settings: { ...settings, issuer: st.settings.issuer }, number: `${job.date.replace(/-/g, '')}-${id.slice(0, 4).toUpperCase()}` })
     const prev = document.title; document.title = `HS3D ponudba ${job.name}`
     setTimeout(() => { window.print(); document.title = prev }, 100)
   }
@@ -35,7 +35,8 @@ export default function App() {
   const doExport = async (job: JobInput, settings: Settings, id: string, kind: 'pdf' | 'xlsx') => {
     try {
       flash(kind === 'pdf' ? 'Pripravljam PDF …' : 'Pripravljam Excel …')
-      const blob = kind === 'pdf' ? await buildPdf(job, settings, id, custOf(job)) : await buildXlsx(job, settings, id, custOf(job))
+      const outputSettings = { ...settings, issuer: st.settings.issuer }
+      const blob = kind === 'pdf' ? await buildPdf(job, outputSettings, id, custOf(job)) : await buildXlsx(job, outputSettings, id, custOf(job))
       const res = await saveFile(blob, kind === 'pdf' ? pdfName(job) : xlsxName(job))
       if (res !== 'cancelled') flash(res === 'shared' ? 'Deljeno' : 'Datoteka prenesena')
     } catch (e) { console.error(e); alert('Izvoz ni uspel.') }

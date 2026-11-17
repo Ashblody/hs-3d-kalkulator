@@ -10,9 +10,10 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
     <div className="text-black bg-white p-8 text-sm font-sans">
       <div className="flex justify-between items-start border-b-4 border-emerald-600 pb-4">
         <div><div className="text-3xl font-black"><span className="text-orange-500">HS</span> 3D</div><div className="text-slate-500">3D-tisk · 3D-skeniranje · CAD-modeliranje</div></div>
-        <div className="text-right"><div className="text-xl font-bold">PONUDBA</div><div>št. {number}</div><div>Datum: {new Date(job.date).toLocaleDateString('sl-SI')}</div><div>Veljavnost: 15 dni</div></div>
+        <div className="text-right"><div className="text-xl font-bold">PONUDBA</div><div>št. {number}</div><div>Datum: {job.date ? new Date(job.date).toLocaleDateString('sl-SI') : 'ni naveden'}</div><div>{job.quoteTerms?.validUntil ? `Velja do: ${new Date(job.quoteTerms.validUntil).toLocaleDateString('sl-SI')}` : 'Veljavnost: 15 dni'}</div></div>
       </div>
-      <div className="mt-4"><div className="text-slate-500 text-xs uppercase">Naročnik</div><div className="font-semibold">{job.client || '—'}</div></div>
+      {settings.issuer && Object.values(settings.issuer).some(Boolean) && <div className="mt-4"><div className="text-slate-500 text-xs uppercase">Izdajatelj</div>{[settings.issuer.name, settings.issuer.address, settings.issuer.contact, settings.issuer.taxId ? `Davčna številka: ${settings.issuer.taxId}` : ''].filter(Boolean).map((x, i) => <div key={i}>{x}</div>)}</div>}
+      <div className="mt-4"><div className="text-slate-500 text-xs uppercase">Naročnik</div><div className="font-semibold">{job.client || '-'}</div></div>
       <div className="mt-3"><div className="text-slate-500 text-xs uppercase">Projekt</div><div className="font-semibold">{job.name}</div>{job.description && <div>{job.description}</div>}</div>
       <table className="w-full mt-6 border-collapse">
         <thead><tr className="bg-slate-100 text-left"><th className="p-2">Postavka</th><th className="p-2">Obseg</th><th className="p-2 text-right">Znesek</th></tr></thead>
@@ -27,6 +28,8 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
         <div className="text-xs text-slate-500 text-right">{eur(r.perPiece)} na kos</div>
       </div>
       {!settings.business.vatEnabled && <p className="mt-6 text-xs">DDV v izračunu ni vključen.</p>}
+      {job.quoteTerms?.delivery && <p className="mt-2 text-xs">Predviden rok: {job.quoteTerms.delivery}</p>}
+      {job.quoteTerms?.terms && <p className="mt-2 text-xs">Pogoji: {job.quoteTerms.terms}</p>}
       {rights.length > 0 && <p className="mt-2 text-xs">Digitalne pravice: {rights.join(', ')}.</p>}
     </div>
   )

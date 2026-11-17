@@ -113,6 +113,11 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             {job.printCostOverride !== null && <NumField label="Stroški tiska (ročno)" value={job.printCostOverride} onChange={(v) => set('printCostOverride')(v)} suffix="€" />}
           </div>}
         </Section>
+        <Section title="Rok in pogoji ponudbe" open={false}>
+          <TextField label="Predviden rok izdelave" value={job.quoteTerms?.delivery ?? ''} onChange={delivery => set('quoteTerms')({ ...job.quoteTerms, delivery })} />
+          <TextField label="Ponudba velja do" type="date" value={job.quoteTerms?.validUntil ?? ''} onChange={validUntil => set('quoteTerms')({ ...job.quoteTerms, validUntil })} />
+          <div className="col-span-2 sm:col-span-3"><TextField label="Pogoji ponudbe" value={job.quoteTerms?.terms ?? ''} onChange={terms => set('quoteTerms')({ ...job.quoteTerms, terms })} /></div>
+        </Section>
       </div>
 
       <div className="space-y-4 lg:sticky lg:top-4 self-start">
