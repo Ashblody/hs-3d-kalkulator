@@ -16,6 +16,15 @@ export const legacyPricing = (s: Settings): Settings => { const rates = { ...s.r
 export const wearPerHour = (p: Printer) => (p.lifeHours > 0 ? (p.price + p.service) / p.lifeHours : 0)
 export const powerFor = (p: Printer, materialType: string) => p.powerW[materialType] ?? p.powerW.default ?? 0
 
+/** Cenik stranke ima prednost pred tiskalnikom; stari podatki uporabijo splošni cenik. */
+export function printRateFor(j: JobInput, s: Settings): number {
+  const valid = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0
+  const customerRate = j.rateOverride?.printHourly
+  if (valid(customerRate)) return customerRate
+  const printerRate = s.printers.find(p => p.id === j.printerId)?.printHourly
+  return valid(printerRate) ? printerRate : nz(s.rates.printHourly)
+}
+
 /** Pribitek -> bruto marža: 50 % pribitka = 33,33 % marže */
 export const markupToMargin = (markupPct: number) => (markupPct <= -100 ? 0 : (markupPct / (100 + markupPct)) * 100)
 
@@ -38,7 +47,7 @@ export function totalPrintHours(j: JobInput) {
 }
 
 export interface Result {
-  printHours: number; kg: number; powerW: number
+  printHours: number; printRate: number; kg: number; powerW: number
   material: number; materialSale: number; saleBonus: number; wastePct: number; wasteG: number; base: number; fail: number; failPct: number; margin: number; marginPct: number
   electricity: number; wear: number; consumables: number; otherDirect: number; adhesive: number; adhesiveLabel: string
   printBeforeReserve: number; reserve: number; printCost: number; printOverridden: boolean
@@ -108,9 +117,10 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const printCost = printOverridden ? (j.printCostOverride as number) : printBeforeReserve + reserve
 
   const r = s.rates
+  const printRate = printRateFor(j, s)
   // tisk = fiksno € na uro tiskalnika + material/potrošni po strošku
   const printDirect = printOverridden ? (j.printCostOverride as number) : materialSale + consumables + otherDirect + adhesive
-  const printSale = printHours * nz(r.printHourly) + printDirect
+  const printSale = printHours * printRate + printDirect
   const markup = printSale - printCost
 
   const fs = fileSaleInfo(j, s)
@@ -158,7 +168,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const belowTarget = laborHours > 0 && earningsPerHour < s.business.targetHourly
 
   return {
-    printHours, kg, powerW, material, materialSale, saleBonus, wastePct, wasteG, base, fail, failPct, margin, marginPct, electricity, wear, consumables, otherDirect, adhesive, adhesiveLabel,
+    printHours, printRate, kg, powerW, material, materialSale, saleBonus, wastePct, wasteG, base, fail, failPct, margin, marginPct, electricity, wear, consumables, otherDirect, adhesive, adhesiveLabel,
     printBeforeReserve, reserve, printCost, printOverridden, markup, printSale,
     printMarginPct: printSale > 0 ? (markup / printSale) * 100 : 0,
     servicesStandard, servicesDiscount, services, digital, profit, laborHours, baseTotal, invoiceMult, invoiceExtra,
@@ -210,4 +220,4 @@ export function floorFrom(own: number, work: number, osebnoExact: number, printH
   return { own: r2(own), floor: ceilStep(base, step), floorBiz: ceilStep(base * mult, step), safe: ceilStep(safeExact, step), safeBiz: ceilStep(safeExact * mult, step) }
 }
 export const jobFloor = (r: Result, s: Settings) =>
-  floorFrom(r.realCosts, r.services, Math.max(0, r.baseTotal - r.discount), r.printOverridden ? 0 : r.printHours, s.rates.printHourly, nz(s.rates.roundTo), s.rates.invoiceMultiplier || 2)
+  floorFrom(r.realCosts, r.services, Math.max(0, r.baseTotal - r.discount), r.printOverridden ? 0 : r.printHours, r.printRate, nz(s.rates.roundTo), s.rates.invoiceMultiplier || 2)

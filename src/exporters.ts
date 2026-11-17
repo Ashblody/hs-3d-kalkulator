@@ -74,12 +74,12 @@ export async function buildXlsx(job: JobInput, settings: Settings, id: string, c
     ['Postavka', 'Obseg', 'Znesek €'], ...lines.map(([l, d, v]) => [l, d, r2(v)]), [],
     ...totals.map(([l, v]) => [l, '', r2(v)]), ['ZA PLAČILO', '', r2(r.gross)], ['Na kos', '', r2(r.perPiece)], [], ['Digitalne pravice', rights],
   ]
-  const ph = r.printHours * settings.rates.printHourly
+  const ph = r.printHours * r.printRate
   const fl = jobFloor(r, settings)
   const pr = isPrinting(job)
   const razclenitev: (string | number)[][] = [['Postavka', 'Znesek €'],
     ['CENA ZA STRANKO', ''],
-    ...(pr ? [[`Tisk ${r2(r.printHours)} h × ${settings.rates.printHourly} €/h`, r2(r.printSale - (r.printOverridden ? (job.printCostOverride ?? 0) : r.materialSale + r.consumables + r.otherDirect + r.adhesive))],
+    ...(pr ? [[`Tisk ${r2(r.printHours)} h × ${r.printRate} €/h`, r2(r.printSale - (r.printOverridden ? (job.printCostOverride ?? 0) : r.materialSale + r.consumables + r.otherDirect + r.adhesive))],
     [`Material ${r2(r.kg * 1000)} g`, r2(r.printOverridden ? (job.printCostOverride ?? 0) : r.materialSale)],
     ...(r.adhesive > 0 && !r.printOverridden ? [[`Lepilo (${r.adhesiveLabel})`, r2(r.adhesive)] as [string, number]] : []),
     ['Potrošni material', r2(r.printOverridden ? 0 : r.consumables + r.otherDirect)]] as (string | number)[][] : []),

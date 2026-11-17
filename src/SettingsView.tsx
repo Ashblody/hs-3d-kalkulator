@@ -57,6 +57,11 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
                 <NumField label="Nabavna cena" value={p.price} onChange={(price) => setP(i, { price })} suffix="€" />
                 <NumField label="Življenjska doba" value={p.lifeHours} onChange={(lifeHours) => setP(i, { lifeHours })} suffix="h" />
                 <NumField label="Servisni stroški (v dobi)" value={p.service} onChange={(service) => setP(i, { service })} suffix="€" />
+                <div className="col-span-2 sm:col-span-4">
+                  <Check label="Lastna prodajna strojna ura za ta tiskalnik" checked={p.printHourly !== undefined} onChange={(on) => setP(i, { printHourly: on ? s.rates.printHourly : undefined })} />
+                  {p.printHourly !== undefined && <NumField label="Prodajna strojna ura" value={p.printHourly} onChange={(printHourly) => setP(i, { printHourly })} suffix="€/h" />}
+                  <p className="text-xs text-slate-500 mt-1">Prodajna ura je cena stranki. Elektrika in amortizacija se ločeno prikažeta kot tvoj strošek za izračun zaslužka; ceni stranki se ne prištevata ponovno. Cenik posamezne stranke ima prednost.</p>
+                </div>
                 <NumField label="Moč – privzeto" value={p.powerW.default ?? 0} onChange={(v) => setP(i, { powerW: { ...p.powerW, default: v } })} suffix="W" />
                 {types.map((t) => <NumField key={t} label={`Moč – ${t}`} value={p.powerW[t] ?? p.powerW.default ?? 0} onChange={(v) => setP(i, { powerW: { ...p.powerW, [t]: v } })} suffix="W" />)}
               </div>

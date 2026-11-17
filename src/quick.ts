@@ -54,7 +54,7 @@ export function quickCompare(q: QuickInput, s: Settings) {
 export function jobText(j: JobInput, s0: Settings) {
   const s = effSettings(j, s0)
   const r = calculate(j, s); const t = allTiers(j, s)
-  const lines = [j.name ? `${j.name}` : '', ...(isPrinting(j) ? [`Tiskanje: ${n(r.printHours)} h × ${e2(s.rates.printHourly)}/h = ${e2(r.printHours * s.rates.printHourly)}`, `Material: ${n(r.kg * 1000)} g × ${e2(r.kg > 0 ? r.material / r.kg : 0)}/kg = ${e2(r.material)}`] : []),
+  const lines = [j.name ? `${j.name}` : '', ...(isPrinting(j) ? [`Tiskanje: ${n(r.printHours)} h × ${e2(r.printRate)}/h = ${e2(r.printHours * r.printRate)}`, `Material: ${n(r.kg * 1000)} g × ${e2(r.kg > 0 ? r.material / r.kg : 0)}/kg = ${e2(r.material)}`] : []),
     `Delo: ${n(r.laborHours)} h × ${e2(s.rates.labourHourly)}/h = ${e2(r.services)}`]
   if (r.digital > 0) lines.push(`Datoteke: ${e2(r.digital)}`)
   lines.push(`Končna cena: ${e2(r.gross)}`)
@@ -77,7 +77,9 @@ export function quickToProject(q: QuickInput, name: string, s: Settings, custome
     quickMarkupPct: nz(q.markupPct), quickMatKg: nz(q.matKg), reservePct: nz(q.failPct ?? 0), printCostOverride: on ? r.material : null, extraWorkH: nz(q.workH), extraWorkRate: nz(q.workRate), otherCosts: r.markup,
     // zaokroževanje naredi projekt sam (globalna nastavitev)
   }
-  const snapshot: Settings = structuredClone({ ...s, rates: { ...s.rates, printHourly: nz(q.printRate), labourHourly: nz(q.workRate), roundTo: nz(q.roundTo ?? 0), minOrder: 0, invoiceMultiplier: 2, marginPct: nz(q.marginPct ?? 0), wastePct: nz(q.wastePct ?? 0) },
+  // Hitri izračun ima izrecno svojo postavko; v njegovem posnetku ne sme prevladati nastavitev tiskalnika.
+  const printers = s.printers.map(({ printHourly: _printHourly, ...printer }) => printer)
+  const snapshot: Settings = structuredClone({ ...s, printers, rates: { ...s.rates, printHourly: nz(q.printRate), labourHourly: nz(q.workRate), roundTo: nz(q.roundTo ?? 0), minOrder: 0, invoiceMultiplier: 2, marginPct: nz(q.marginPct ?? 0), wastePct: nz(q.wastePct ?? 0) },
     business: { ...s.business, vatEnabled: nz(q.vatPct ?? 0) > 0, vatPct: nz(q.vatPct ?? 0) || s.business.vatPct } })
   // ure, ki niso cele minute, ohranimo natančno prek ur na kos
   if (Math.abs(input.batchHours + input.batchMinutes / 60 - h) > 1e-9) Object.assign(input, { useBatchTime: false, hoursPerPiece: h, minutesPerPiece: 0 })

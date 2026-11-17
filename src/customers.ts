@@ -16,7 +16,7 @@ export function lastPricing(projects: Project[], id: string) {
   const mat = s.materials.find((m) => m.id === p.input.materialId)
   return {
     mode: p.input.mode, materialId: p.input.materialId, reservePct: p.input.reservePct, markupPct: p.input.markupPct, fileSale: { ...p.input.fileSale },
-    rates: { printHourly: s.rates.printHourly, labourHourly: s.rates.labourHourly, fileAddonStl: s.rates.fileAddonStl, fileAddonStep: s.rates.fileAddonStep },
+    rates: { printHourly: calculate(p.input, p.snapshot).printRate, labourHourly: s.rates.labourHourly, fileAddonStl: s.rates.fileAddonStl, fileAddonStep: s.rates.fileAddonStep },
     matKg: p.input.quickMatKg ?? (mat ? regularPerKg(mat) : undefined), quickMarkupPct: p.input.quickMarkupPct, from: p,
   }
 }

@@ -13,6 +13,8 @@ export interface Printer {
   service: number
   /** povprečna moč v W po vrsti materiala; 'default' za ostale */
   powerW: Record<string, number>
+  /** Prodajna postavka za ta tiskalnik; brez vrednosti velja splošni cenik. */
+  printHourly?: number
   note?: string
 }
 

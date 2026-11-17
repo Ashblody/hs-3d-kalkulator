@@ -27,7 +27,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             {customerSlot}
             <TextField label="Stranka" value={job.client} onChange={set('client')} />
             <TextField label="Datum" type="date" value={job.date} onChange={set('date')} />
-            {job.rateOverride && <div className="col-span-2 sm:col-span-3 text-xs text-sky-600 dark:text-sky-300">Cenik stranke: tisk {num(settings.rates.printHourly)} €/h · delo {num(settings.rates.labourHourly)} €/h <button className="underline ml-1" onClick={() => onChange({ ...job, rateOverride: undefined })}>ponastavi</button></div>}
+            {job.rateOverride && <div className="col-span-2 sm:col-span-3 text-xs text-sky-600 dark:text-sky-300">Cenik stranke: tisk {num(r.printRate)} €/h · delo {num(settings.rates.labourHourly)} €/h <button className="underline ml-1" onClick={() => onChange({ ...job, rateOverride: undefined })}>ponastavi</button></div>}
             <div className="col-span-2"><TextField label="Opis" value={job.description} onChange={set('description')} /></div>
           </div>
         </div>
@@ -68,7 +68,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             <div className="col-span-2 sm:col-span-3 text-xs text-slate-500 dark:text-slate-400">
               {r.adhesive > 0 && <span className="text-sky-600 dark:text-sky-300">Lepilo ({r.adhesiveLabel}) {eur(r.adhesive)} se doda samodejno · </span>}
               Teža iz slicerja (skupaj s podporami in purge) · čas skupaj {num(r.printHours)} h · filament {num(r.kg * 1000)} g · moč {num(r.powerW)} W{printer && !r.powerW ? ' (vnesi moč v Nastavitvah)' : ''} · amortizacija {printer ? num(wearPerHour(printer)) : 0} €/h
-              {` · tisk ${num(settings.rates.printHourly)} €/h tiskalnika + material po strošku`}
+              {` · tisk ${num(r.printRate)} €/h tiskalnika + material po strošku`}
               {mat && printer && powerFor(printer, mat.type) === 0 && <span className="text-orange-600"> · Za {mat.type} na tem tiskalniku moč ni vnesena.</span>}
             </div>
           </Section>
@@ -112,7 +112,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             </button>)) })()}</div>
           <div className="mt-2 flex justify-between text-sm text-slate-600 dark:text-slate-300"><span>{showPrint ? 'Moj strošek (material, elektrika, obraba, rezerva)' : 'Moj strošek (prevoz, ostalo)'}</span><b className="tabular-nums">{eur(r.realCosts)}</b></div>
         </div>
-        {(() => { const q = quickCalc({ ...quickDefaults, ...(isV10(settings) ? { ...quickExtras(settings), failPct: job.reservePct } : {}), printH: r.printHours, grams: r.kg * 1000 / (1 + r.wastePct / 100), workH: r.laborHours, matKg: mat ? regularPerKg(mat) : 20, printRate: settings.rates.printHourly, workRate: settings.rates.labourHourly, business: job.mode === 'poslovno' })
+        {(() => { const q = quickCalc({ ...quickDefaults, ...(isV10(settings) ? { ...quickExtras(settings), failPct: job.reservePct } : {}), printH: r.printHours, grams: r.kg * 1000 / (1 + r.wastePct / 100), workH: r.laborHours, matKg: mat ? regularPerKg(mat) : 20, printRate: r.printRate, workRate: settings.rates.labourHourly, business: job.mode === 'poslovno' })
           const hv = job.mode === 'poslovno' ? q.business : q.total, d = r.gross - hv
           return <div className="card text-sm" data-testid="primerjava"><div className="h2">Primerjava Hitri ↔ Podroben</div>
             <div className="grid grid-cols-2 gap-2"><div className="rounded-xl p-3 bg-slate-50 dark:bg-slate-800/60 ring-1 ring-slate-200 dark:ring-slate-700/60"><div className="text-xs text-slate-500 dark:text-slate-400">Hitri</div><div className="text-xl font-bold tabular-nums">{eur(hv)}</div></div>
@@ -134,7 +134,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <div className="h2">Razčlenitev</div>
           <div className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mt-1">Cena za stranko</div>
           {showPrint && <>
-          <Row l={`Tisk ${num(r.printHours)} h × ${num(settings.rates.printHourly)} €/h`} v={eur(r.printOverridden ? r.printSale - (job.printCostOverride ?? 0) : r.printHours * settings.rates.printHourly)} />
+          <Row l={`Tisk ${num(r.printHours)} h × ${num(r.printRate)} €/h`} v={eur(r.printOverridden ? r.printSale - (job.printCostOverride ?? 0) : r.printHours * r.printRate)} />
           {r.printOverridden ? <Row l="Material (ročno)" v={eur(job.printCostOverride ?? 0)} /> : <>
           <Row l={`Material ${num(r.kg * 1000)} g × ${num(r.kg > 0 ? r.materialSale / r.kg : 0)} €/kg${r.wasteG > 0.004 ? ` (z odpadom ${num(r.wastePct)} %)` : ''}${r.saleBonus > 0.004 ? ', redna cena' : ''}`} v={eur(r.materialSale)} info={r.wasteG > 0.004 ? TIPS.waste : undefined} />
           {r.adhesive > 0 && <Row l={`Lepilo (${r.adhesiveLabel})`} v={eur(r.adhesive)} />}
