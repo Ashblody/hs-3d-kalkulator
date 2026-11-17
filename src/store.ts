@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Customer, JobInput, Project, Settings, Status } from './types'
 import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, blankJob, ratesV1, withAdhesive, rates as ratesNow } from './seed'
 import { uid } from './format'
@@ -108,13 +108,29 @@ export function normalize(raw: unknown): AppState {
 }
 
 export function usePersistentState() {
-  const [state, setState] = useState<AppState>(() => {
-    try { const s = localStorage.getItem(KEY); if (s) return normalize(JSON.parse(s)) } catch { /* prvi zagon */ }
-    return freshState()
+  const [loaded] = useState((): { state: AppState; problem: { message: string; original?: string } | null } => {
+    let original: string | null = null
+    try {
+      original = localStorage.getItem(KEY)
+      return { state: original ? normalize(JSON.parse(original)) : freshState(), problem: null }
+    } catch {
+      // Izvirnega zapisa ne prepisujemo, dokler se uporabnik ne odloči za obnovitev.
+      return { state: freshState(), problem: { message: 'Shranjene podatke ni bilo mogoče prebrati. Samodejno shranjevanje je ustavljeno.', ...(original ? { original } : {}) } }
+    }
   })
-  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(state)) }, [state])
+  const [state, setState] = useState<AppState>(loaded.state)
+  const [problem, setProblem] = useState(loaded.problem)
+  const blocked = useRef(!!loaded.problem)
+  useEffect(() => {
+    if (blocked.current) return
+    try { localStorage.setItem(KEY, JSON.stringify(state)) }
+    catch {
+      blocked.current = true
+      setProblem({ message: 'Shranjevanje v brskalnik ni uspelo. Izvozi trenutno JSON-kopijo; prejšnji shranjeni zapis ni bil namerno prepisan.' })
+    }
+  }, [state])
   useEffect(() => { document.documentElement.classList.toggle('dark', state.dark) }, [state.dark])
-  return [state, setState] as const
+  return [state, setState, problem] as const
 }
 
 /**

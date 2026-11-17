@@ -21,7 +21,7 @@ type Tab = 'kalk' | 'hitri' | 'projekti' | 'stranke' | 'posel' | 'nastavitve'
 const tabs: [Tab, string][] = [['hitri', 'Hitri'], ['kalk', 'Podroben'], ['projekti', 'Projekti'], ['stranke', 'Stranke'], ['posel', 'Posel'], ['nastavitve', 'Nastavitve']]
 
 export default function App() {
-  const [st, setSt] = usePersistentState()
+  const [st, setSt, storageProblem] = usePersistentState()
   const [tab, setTab] = useState<Tab>('hitri')
   const [msg, setMsg] = useState('')
   const [quote, setQuote] = useState<{ job: JobInput; settings: Settings; number: string } | null>(null)
@@ -41,7 +41,7 @@ export default function App() {
       if (res !== 'cancelled') flash(res === 'shared' ? 'Deljeno' : 'Datoteka prenesena')
     } catch (e) { console.error(e); alert('Izvoz ni uspel.') }
   }
-  const sync = useDriveSync(st, setSt, flash)
+  const sync = useDriveSync(st, setSt, flash, !!storageProblem)
   // Podroben: vedno Osebno, čas na kos (stari projekti s Poslovno / skupnim časom se pretvorijo ob odprtju)
   useEffect(() => { if (toPodroben(st.current) !== st.current) setSt((s) => ({ ...s, current: toPodroben(s.current) })) }, [st.current])
   const project = st.projects.find((p) => p.id === st.currentId)
@@ -88,6 +88,10 @@ export default function App() {
         </div>
       </header>
       <main className="max-w-6xl mx-auto p-4">
+        {storageProblem && <div role="alert" className="card mb-4 !ring-red-500 text-red-700 dark:text-red-300">
+          <p className="font-semibold">Težava pri lokalnem shranjevanju</p><p className="text-sm mt-1">{storageProblem.message}</p>
+          <div className="flex flex-wrap gap-2 mt-2"><button className="btn" onClick={() => exportJson(st)}>Izvozi trenutno stanje</button>{storageProblem.original && <button className="btn" onClick={() => saveFile(new Blob([storageProblem.original!], { type: 'application/json' }), 'hs3d-izvirni-zapis.json')}>Prenesi izvirni zapis</button>}</div>
+        </div>}
         {msg && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg z-20">{msg}</div>}
         {tab === 'kalk' && (<>
           {project && <div className="text-sm font-semibold text-sky-700 dark:text-sky-300 mb-1" data-testid="editing">Urejaš shranjen projekt »{project.input.name || 'brez imena'}«. Za drug projekt pritisni Nov projekt.</div>}

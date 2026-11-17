@@ -10,7 +10,7 @@ const labels: Record<Status, string> = { idle: 'Ni prijave', sync: 'Sinhronizira
 export const applySynced = (s: AppState, synced: AppState): AppState => ({ ...mergeStates(s, synced).state, current: s.current, currentId: s.currentId, dark: s.dark })
 
 /** Sinhronizacija z Google Drive (appDataFolder): ob zagonu pull+merge, ob spremembah push z zamikom */
-export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState) => void, flash: (m: string) => void) {
+export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState) => void, flash: (m: string) => void, storageBlocked = false) {
   const [prefs, setPrefsS] = useState<SyncPrefs>(loadPrefs)
   const [status, setStatus] = useState<Status>(prefs.signedIn ? 'sync' : 'idle')
   const stRef = useRef(st); stRef.current = st
@@ -20,7 +20,7 @@ export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState)
   const clientId = effectiveClientId(prefs)
 
   const run = useCallback(async (manual = false) => {
-    if (!clientId || busy.current) return
+    if (!clientId || busy.current || storageBlocked) return
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setStatus('offline'); return }
     busy.current = true; setStatus('sync')
     try {
@@ -33,7 +33,7 @@ export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState)
     } catch (e) {
       setStatus(e instanceof SettingsConflictError ? 'conflict' : e instanceof AuthError ? 'auth' : !navigator.onLine || e instanceof TypeError ? 'offline' : 'error')
     } finally { busy.current = false }
-  }, [clientId])
+  }, [clientId, storageBlocked])
 
   // ob zagonu
   useEffect(() => { if (prefs.signedIn && clientId) run() }, [])
@@ -49,6 +49,7 @@ export function useDriveSync(st: AppState, setSt: (f: (s: AppState) => AppState)
   }, [st.projects, st.customers, st.settings, st.deleted, prefs.signedIn])
 
   const signIn = async () => {
+    if (storageBlocked) { flash('Najprej odpravi težavo z lokalnim shranjevanjem.'); return }
     if (!clientId) { alert('Najprej vpiši OAuth Client ID.'); return }
     try { await requestToken(clientId, hasValidToken() ? '' : 'consent'); setPrefs({ ...loadPrefs(), signedIn: true }); await run(true) }
     catch { setStatus('auth'); flash('Prijava ni uspela') }
