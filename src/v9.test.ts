@@ -5,7 +5,7 @@ import { defaultSettings, demoJob, emptyJob } from './seed'
 import { mergeLegacy } from './store'
 
 describe('v9: lepilo in združena polja', () => {
-  const s = defaultSettings()
+  const s = legacyPricing(defaultSettings())
   it('ASA dobi lepilo, PLA ne', () => {
     expect(s.materials.find((m) => m.id === 'bambu-asa')?.adhesive).toBe(0.5)
     expect(s.materials.find((m) => m.id === 'bambu-pla')?.adhesive).toBe(0)
@@ -25,9 +25,10 @@ describe('v9: lepilo in združena polja', () => {
 })
 
 import { jobFloor } from './calc'
+import { legacyPricing } from './calc'
 describe('spodnja meja', () => {
   it('768 g ASA, 18,8 h, 3,5 h', () => {
-    const s = defaultSettings()
+    const s = legacyPricing(defaultSettings())
     expect(jobFloor(calculate(demoJob(), s), s)).toEqual({ own: 35.49, floor: 106, floorBiz: 211, safe: 132, safeBiz: 263 })
   })
 })

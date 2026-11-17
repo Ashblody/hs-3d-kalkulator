@@ -61,8 +61,24 @@ export function Big({ label, value, sub, tone = 'blue' }: { label: string; value
   )
 }
 
-export function Row({ l, v, strong }: { l: string; v: string; strong?: boolean }) {
-  return <div className={`flex justify-between py-1 text-sm ${strong ? 'font-semibold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 mt-1 pt-2' : 'text-slate-600 dark:text-slate-300'}`}><span>{l}</span><span className="tabular-nums">{v}</span></div>
+export function Row({ l, v, strong, info }: { l: string; v: string; strong?: boolean; info?: string }) {
+  return <div className={`flex justify-between gap-2 py-1 text-sm ${strong ? 'font-semibold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 mt-1 pt-2' : 'text-slate-600 dark:text-slate-300'}`}><span>{l}{info && <Tip text={info} />}</span><span className="tabular-nums whitespace-nowrap">{v}</span></div>
+}
+
+/** majhen ⓘ: klik pokaže kratko razlago (kompaktno na telefonu) */
+export function Tip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return <><button type="button" aria-label="Zakaj?" aria-expanded={open} className="ml-1 text-sky-600 dark:text-sky-300" onClick={() => setOpen(!open)}>ⓘ</button>
+    {open && <span className="block text-xs text-slate-500 dark:text-slate-400 font-normal" data-testid="tip">{text}</span>}</>
+}
+
+/** razlage pribitkov (Hitri, Podroben, Nastavitve) */
+export const TIPS = {
+  fail: 'Del tiskov se ponesreči (odlepljanje, zamašitev) in jih je treba ponoviti. Ta odstotek to tveganje razporedi na vse posle.',
+  margin: 'Zaslužek nad stroški in urnimi postavkami – za novo opremo, razvoj in nepredvidene stroške.',
+  waste: 'Brim, testni tiski, čiščenje šobe in menjava orodja (INDX purge) porabijo nekaj filamenta, ki ga ocena teže ne zajame vedno. Če teža iz slicerja purge že vsebuje, nastavi 0 %.',
+  vat: 'Vklopi samo, če si zavezanec za DDV. Mali davčni zavezanec DDV ne obračuna.',
+  sale: 'Stranka plača material po redni ceni. Če si ga kupil v akciji, je razlika tvoj dodatni zaslužek.',
 }
 
 /** Čas v enem polju: 1:30 · 1,5 · 90m · 2h 15m · 1d 2h. `minutes` = vrednost v minutah. */

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { quickCalc, quickText, quickDefaults, quickCompare, jobText, quickToProject } from './quick'
 import { calculate, r2 } from './calc'
 import { defaultSettings, demoJob } from './seed'
+import { legacyPricing } from './calc'
 const ex = { ...quickDefaults, printH: 20, grams: 800, workH: 3.5 }
 describe('Hitri izračun', () => {
   it('20 h / 800 g / 3,5 h / 20 €/kg = 156,00 €, 2× = 312,00 €', () => {
@@ -17,16 +18,16 @@ describe('Hitri izračun', () => {
     expect(t).toContain('Končna cena: 156,00 €'); expect(t).toContain('Z računom: 312,00 €'); expect(t).toContain('Tiskanje: 20 h')
   })
   it('primerjava s podrobnim', () => {
-    const c = quickCompare(ex, defaultSettings())
+    const c = quickCompare(ex, legacyPricing(defaultSettings()))
     console.log('CMP', JSON.stringify(c))
     expect(c.detailed).toBe(154); expect(c.diff).toBe(-2)
   })
   it('povzetek projekta', () => {
-    const t = jobText(demoJob(), defaultSettings())
+    const t = jobText(demoJob(), legacyPricing(defaultSettings()))
     expect(t).toMatch(/Tiskanje: 18,8 h × 3,50 €\/h/); expect(t).toContain('Končna cena: 320,00 €')
   })
   it('shrani kot projekt: ista cena, Ponudba-tip', () => {
-    const s = defaultSettings()
+    const s = legacyPricing(defaultSettings())
     for (const q of [ex, { ...ex, business: true }, { ...ex, markupPct: 10, printH: 7.25, grams: 123 }]) {
       const p = quickToProject(q, 'Test', s)
       const r = calculate(p.input, p.snapshot)

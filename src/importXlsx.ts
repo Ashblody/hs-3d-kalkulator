@@ -1,6 +1,7 @@
 import type { AppState } from './store'
 import type { Customer, JobInput, Printer, Project, Settings } from './types'
 import { blankJob } from './seed'
+import { legacyPricing } from './calc'
 
 /** enkratna uvozna migracija (iz 6 starih Excel izračunov): izbriše stare projekte in doda opravljene */
 export const IMPORT_ID = 'xlsx-opravljeni-2026-10-27'
@@ -63,7 +64,7 @@ export function applyImport(st: AppState): AppState {
     const id = pid(r)
     if (have.has(id) || gone.has(id)) continue
     const ts = `${r.date}T12:00:00.000Z`
-    added.push({ id, status: 'opravljeno', createdAt: ts, updatedAt: ts, input: buildInput(r, settings, custIdFor(r.customer)), snapshot: structuredClone(settings), actual: { printHours: 0, grams: 0, laborHours: 0 } })
+    added.push({ id, status: 'opravljeno', createdAt: ts, updatedAt: ts, input: buildInput(r, settings, custIdFor(r.customer)), snapshot: structuredClone(legacyPricing(settings)), actual: { printHours: 0, grams: 0, laborHours: 0 } })
   }
   const projects = [...st.projects.filter((p) => !gone2.has(p.id)), ...added]
   const curGone = st.currentId && gone2.has(st.currentId)

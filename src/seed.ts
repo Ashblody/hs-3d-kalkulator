@@ -72,7 +72,7 @@ export const ratesV1 = { scan: 25, edit: 20, cad: 25, reverse: 30, prep: 20, mar
 export const rates: Rates = {
   scan: 20, edit: 15, cad: 20, reverse: 25, prep: 15, km: 0.3, minOrder: 15,
   markupPct: 100, reservePct: 10, friendDiscountPct: 15, fileAddonStl: 15, roundTo: 1, fileAddonStep: 30,
-  printHourly: 3.5, labourHourly: 20, invoiceMultiplier: 2, adhesiveDefault: 0.5,
+  printHourly: 3.5, labourHourly: 20, invoiceMultiplier: 2, adhesiveDefault: 0.5, wastePct: 5, marginPct: 20,
 }
 
 export const business: Business = {

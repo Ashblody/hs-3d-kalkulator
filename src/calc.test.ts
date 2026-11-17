@@ -3,7 +3,7 @@ import { calculate, fileSaleInfo, markupToMargin, pricePerKg, r2, totalPrintHour
 import { defaultSettings, demoJob , emptyJob } from './seed'
 
 /** brez zaokroževanja – za preverjanje točnih zneskov */
-const noRound = () => { const s = defaultSettings(); s.rates.roundTo = 0; return s }
+const noRound = () => { const s = legacyPricing(defaultSettings()); s.rates.roundTo = 0; return s }
 
 describe('demo projekt Nosilci lučk', () => {
   const s = noRound()
@@ -73,7 +73,7 @@ describe('varnostna kopija', () => {
     const s = initialState()
     const back = normalize(JSON.parse(JSON.stringify(s)))
     expect(back.projects[0].input.name).toBe('Nosilci lučk – 2 leva + 2 desna')
-    expect(r2(calculate(back.projects[0].input, back.projects[0].snapshot).net)).toBe(320)
+    expect(r2(calculate(back.projects[0].input, legacyPricing(back.projects[0].snapshot)).net)).toBe(320)
   })
   it('zavrne neveljavno datoteko', () => {
     expect(() => normalize({ foo: 1 })).toThrow()
@@ -83,7 +83,7 @@ describe('varnostna kopija', () => {
 import { materialsV2 } from './seed'
 describe('migracija materialov', () => {
   it('doda nove, ohrani urejene in ne vrne izbrisanih', () => {
-    const old = defaultSettings()
+    const old = legacyPricing(defaultSettings())
     old.materials = old.materials.filter((m) => !m.id.startsWith('bb2-') && !m.id.startsWith('pm2-') && !m.id.startsWith('tr2-') && m.id !== 'pm-asa')
     delete old.materialSeeds
     old.materials[0].prices[0].price = 99
@@ -134,7 +134,7 @@ describe('nov projekt', () => {
 
 describe('migracija cenika v3', () => {
   it('posodobi samo stare privzete vrednosti', () => {
-    const old = defaultSettings()
+    const old = legacyPricing(defaultSettings())
     delete old.ratesVersion
     old.rates = { ...old.rates, scan: 25, edit: 20, cad: 25, reverse: 30, prep: 22, markupPct: 50 }
     const st = normalize({ settings: old, projects: [] })
@@ -146,15 +146,15 @@ describe('migracija cenika v3', () => {
 
 describe('zaokroževanje, plošče, statusi, podvoji', () => {
   it('privzeto navzgor na 1 €, prikaže razliko', () => {
-    const r = calculate(demoJob(), defaultSettings())
+    const r = calculate(demoJob(), legacyPricing(defaultSettings()))
     expect(r.net).toBe(320); expect(r2(r.rounding)).toBe(0.68); expect(r2(r.netBeforeRounding)).toBe(319.32)
-    console.log('ROUND', JSON.stringify({ stl: calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, defaultSettings()).net, step: calculate({ ...demoJob(), fileSale: { kind: 'step' } }, defaultSettings()).net }))
+    console.log('ROUND', JSON.stringify({ stl: calculate({ ...demoJob(), fileSale: { kind: 'stl' } }, legacyPricing(defaultSettings())).net, step: calculate({ ...demoJob(), fileSale: { kind: 'step' } }, legacyPricing(defaultSettings())).net }))
   })
   it('na 1 € in izklop', () => {
-    const s = defaultSettings(); s.rates.roundTo = 1
+    const s = legacyPricing(defaultSettings()); s.rates.roundTo = 1
     expect(calculate(demoJob(), s).net).toBe(320)
     s.rates.roundTo = 0; expect(r2(calculate(demoJob(), s).net)).toBe(319.32)
-    expect(calculate({ ...demoJob(), scanH: 0, editH: 0, cadH: 0, prepH: 0, finishH: 0, pieces: 1, gramsPerPiece: 5, hoursPerPiece: 0, minutesPerPiece: 20, consumables: 0 }, defaultSettings()).net).toBe(15)
+    expect(calculate({ ...demoJob(), scanH: 0, editH: 0, cadH: 0, prepH: 0, finishH: 0, pieces: 1, gramsPerPiece: 5, hoursPerPiece: 0, minutesPerPiece: 20, consumables: 0 }, legacyPricing(defaultSettings())).net).toBe(15)
   })
   it('plošče seštejejo čas in grame, material po plošči', () => {
     const s = noRound()
@@ -180,36 +180,37 @@ import { allTiers } from './calc'
 describe('šefov model: referenčni posel 5 h, 800 g, 3,5 h dela', () => {
   const ref = (materialId: string) => ({ ...emptyJob(), materialId, pieces: 1, gramsPerPiece: 800, hoursPerPiece: 5, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 })
   for (const m of ['bb2-pla', 'bb2-asa']) it('izpis ' + m, () => {
-    const t = allTiers(ref(m), defaultSettings())
+    const t = allTiers(ref(m), legacyPricing(defaultSettings()))
     console.log('REF', m, JSON.stringify(Object.fromEntries(Object.entries(t).map(([k, r]) => [k, { mat: r2(r.material), tisk: r2(r.printSale), stroski: r2(r.printCost), delo: r2(r.services), pred: r2(r.netBeforeRounding), cena: r2(r.net) }]))))
   })
   it('PLA: osebno 102 €, poslovno 203 €', () => {
-    const t = allTiers(ref('bb2-pla'), defaultSettings())
+    const t = allTiers(ref('bb2-pla'), legacyPricing(defaultSettings()))
     expect(r2(t.osebno.netBeforeRounding)).toBe(101.09); expect(t.osebno.net).toBe(102); expect(t.poslovno.net).toBe(203)
     expect(t.poslovno.net).toBe(Math.ceil(t.osebno.netBeforeRounding * 2))
   })
   it('migracija: 36 → 20, lastna vrednost ostane', () => {
-    const o = defaultSettings(); o.ratesVersion = 4; o.rates.labourHourly = 36
+    const o = legacyPricing(defaultSettings()); o.ratesVersion = 4; o.rates.labourHourly = 36
     expect(normalize({ settings: o, projects: [] }).settings.rates.labourHourly).toBe(20)
-    const o2 = defaultSettings(); o2.ratesVersion = 4; o2.rates.labourHourly = 30
+    const o2 = legacyPricing(defaultSettings()); o2.ratesVersion = 4; o2.rates.labourHourly = 30
     expect(normalize({ settings: o2, projects: [] }).settings.rates.labourHourly).toBe(30)
   })
 })
 
 describe('zaokroževanje 1 € privzeto', () => {
   it('migracija 5 → 1, lastna 0 ostane', () => {
-    const o = defaultSettings(); o.ratesVersion = 5; o.rates.roundTo = 5
+    const o = legacyPricing(defaultSettings()); o.ratesVersion = 5; o.rates.roundTo = 5
     expect(normalize({ settings: o, projects: [] }).settings.rates.roundTo).toBe(1)
-    const o2 = defaultSettings(); o2.ratesVersion = 5; o2.rates.roundTo = 0
+    const o2 = legacyPricing(defaultSettings()); o2.ratesVersion = 5; o2.rates.roundTo = 0
     expect(normalize({ settings: o2, projects: [] }).settings.rates.roundTo).toBe(0)
   })
   it('izpis 20 h / 800 g PLA / 3,5 h', () => {
-    const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, defaultSettings())
+    const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, legacyPricing(defaultSettings()))
     console.log('R20', JSON.stringify(Object.fromEntries(Object.entries(t).map(([k, r]) => [k, { mat: r2(r.material), tisk: r2(r.printSale), stroski: r2(r.printCost), delo: r2(r.services), pred: r2(r.netBeforeRounding), cena: r2(r.net) }]))))
   })
 })
 
 import { migrateMode } from './store'
+import { legacyPricing } from './calc'
 describe('v7: Osebno / Poslovno', () => {
   it('migracija stopenj', () => {
     expect([migrateMode({ mode: 'stranka' as never }), migrateMode({ mode: 'stranka' as never, invoice: false } as never), migrateMode({ mode: 'prijatelj' as never, invoice: true } as never), migrateMode({ mode: 'domaci' as never }), migrateMode({ mode: 'zase' as never }), migrateMode({ mode: 'poslovno' })])
@@ -224,7 +225,7 @@ describe('v7: Osebno / Poslovno', () => {
     expect('invoice' in st.projects[1].input).toBe(false)
   })
   it('referenčni posel 20 h, 800 g PLA, 3,5 h', () => {
-    const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, defaultSettings())
+    const t = allTiers({ ...emptyJob(), materialId: 'bb2-pla', pieces: 1, gramsPerPiece: 800, hoursPerPiece: 20, scanH: 1, editH: 1, cadH: 1, prepH: 0.5 }, legacyPricing(defaultSettings()))
     console.log('V7', JSON.stringify({ osebno: t.osebno.net, poslovno: t.poslovno.net, strosek: r2(t.osebno.realCosts), dobicekO: r2(t.osebno.profit), dobicekP: r2(t.poslovno.profit) }))
     expect(t.osebno.net).toBe(154); expect(t.poslovno.net).toBe(308)
   })
@@ -235,7 +236,7 @@ describe('Trček PC-ABS V0 in ASA-CF', () => {
     const pc = materialsV2.find((m) => m.id === 'tr2-pcabs')!, cf = materialsV2.find((m) => m.id === 'tr2-asacf')!
     expect([pc.spoolG, pc.prices.map((p) => p.price), r2(pricePerKg(pc))]).toEqual([1000, [39.98, 31.98], 39.98])
     expect([cf.spoolG, cf.prices.map((p) => p.price), r2(pricePerKg(cf))]).toEqual([800, [27.89, 23.71], 34.86])
-    const old = defaultSettings(); old.materials = old.materials.filter((m) => !['tr2-pcabs', 'tr2-asacf'].includes(m.id)); old.materialSeeds = old.materialSeeds!.filter((id) => !['tr2-pcabs', 'tr2-asacf'].includes(id))
+    const old = legacyPricing(defaultSettings()); old.materials = old.materials.filter((m) => !['tr2-pcabs', 'tr2-asacf'].includes(m.id)); old.materialSeeds = old.materialSeeds!.filter((id) => !['tr2-pcabs', 'tr2-asacf'].includes(id))
     const st = normalize({ ...initialState(), settings: old })
     expect(st.settings.materials.filter((m) => m.id === 'tr2-pcabs' || m.id === 'tr2-asacf').map((m) => m.adhesive)).toEqual([0.5, 0.5])
   })

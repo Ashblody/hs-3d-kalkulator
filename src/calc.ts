@@ -7,6 +7,12 @@ export const pricePerKg = (m: Material) => {
   const p = m.prices[m.activePrice] ?? m.prices[0]
   return m.spoolG > 0 && p ? p.price / (m.spoolG / 1000) : 0
 }
+/** redna cena (prva cena materiala) – vedno za ceno stranke, ne glede na izbrano akcijsko */
+export const regularPerKg = (m: Material) => { const p = m.prices[0]; return m.spoolG > 0 && p ? p.price / (m.spoolG / 1000) : 0 }
+/** v10 cenik: rezerva in marža v ceni za stranko, odpad v gramih (stari posnetki projektov nimajo marginPct → stara logika) */
+export const isV10 = (s: Settings) => s.rates.marginPct !== undefined
+/** stari cenik (brez marže/odpada, rezerva samo v mojem strošku) – za uvožene opravljene projekte in stare teste */
+export const legacyPricing = (s: Settings): Settings => { const rates = { ...s.rates }; delete rates.marginPct; delete rates.wastePct; return { ...s, rates } }
 export const wearPerHour = (p: Printer) => (p.lifeHours > 0 ? (p.price + p.service) / p.lifeHours : 0)
 export const powerFor = (p: Printer, materialType: string) => p.powerW[materialType] ?? p.powerW.default ?? 0
 
@@ -33,7 +39,8 @@ export function totalPrintHours(j: JobInput) {
 
 export interface Result {
   printHours: number; kg: number; powerW: number
-  material: number; electricity: number; wear: number; consumables: number; otherDirect: number; adhesive: number; adhesiveLabel: string
+  material: number; materialSale: number; saleBonus: number; wastePct: number; wasteG: number; base: number; fail: number; failPct: number; margin: number; marginPct: number
+  electricity: number; wear: number; consumables: number; otherDirect: number; adhesive: number; adhesiveLabel: string
   printBeforeReserve: number; reserve: number; printCost: number; printOverridden: boolean
   markup: number; printSale: number; printMarginPct: number
   servicesStandard: number; servicesDiscount: number; services: number
@@ -70,13 +77,22 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const mat = s.materials.find((m) => m.id === j.materialId)
   const printHours = totalPrintHours(j)
   const plates = j.usePlates ? (j.plates ?? []) : []
-  const kg = ((j.usePlates ? plates.reduce((a, p) => a + nz(p.grams), 0) : nz(j.pieces) * nz(j.gramsPerPiece)) + nz(j.extraMaterialG)) / 1000
+  const v10 = isV10(s)
+  const wastePct = v10 ? nz(s.rates.wastePct ?? 0) : 0, wf = 1 + wastePct / 100
+  const kg0 = ((j.usePlates ? plates.reduce((a, p) => a + nz(p.grams), 0) : nz(j.pieces) * nz(j.gramsPerPiece)) + nz(j.extraMaterialG)) / 1000
+  const kg = kg0 * wf, wasteG = (kg - kg0) * 1000
   const powerW = printer && mat ? powerFor(printer, mat.type) : 0
 
-  const priceOf = (id: string) => { const m = s.materials.find((x) => x.id === id) ?? mat; return m ? pricePerKg(m) : 0 }
-  const material = j.usePlates
-    ? plates.reduce((a, p) => a + (nz(p.grams) / 1000) * priceOf(p.materialId), 0) + (nz(j.extraMaterialG) / 1000) * (mat ? pricePerKg(mat) : 0)
-    : mat ? kg * pricePerKg(mat) : 0
+  // material: moj strošek po izbrani (plačani) ceni, za stranko vedno po redni ceni
+  const matCost = (per: (m: Material) => number) => {
+    const priceOf = (id: string) => { const m = s.materials.find((x) => x.id === id) ?? mat; return m ? per(m) : 0 }
+    return j.usePlates
+      ? (plates.reduce((a, p) => a + (nz(p.grams) / 1000) * priceOf(p.materialId), 0) + (nz(j.extraMaterialG) / 1000) * (mat ? per(mat) : 0)) * wf
+      : mat ? kg * per(mat) : 0
+  }
+  const material = matCost(pricePerKg)
+  const materialSale = matCost(regularPerKg)
+  const saleBonus = Math.max(0, materialSale - material)
   const electricity = printHours * (powerW / 1000) * s.business.kwhPrice
   const wear = printer ? printHours * wearPerHour(printer) : 0
   const consumables = nz(j.consumables)
@@ -93,7 +109,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
 
   const r = s.rates
   // tisk = fiksno € na uro tiskalnika + material/potrošni po strošku
-  const printDirect = printOverridden ? (j.printCostOverride as number) : material + consumables + otherDirect + adhesive
+  const printDirect = printOverridden ? (j.printCostOverride as number) : materialSale + consumables + otherDirect + adhesive
   const printSale = printHours * nz(r.printHourly) + printDirect
   const markup = printSale - printCost
 
@@ -112,16 +128,23 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const transport = nz(j.km) * r.km
   const packaging = nz(j.packaging), delivery = nz(j.delivery), otherCosts = nz(j.otherCosts)
   const discount = nz(j.discount)
-  const baseTotal = printSale + services + digital + transport + packaging + delivery + otherCosts
+  // vrstni red (v10): osnova → + rezerva za neuspele tiske % → + marža % → (Poslovno ×) → − popust → min. naročilo → (DDV) → zaokroževanje
+  const base = printSale + services + digital + transport + packaging + delivery + otherCosts
+  const failPct = v10 ? nz(j.reservePct) : 0, marginPct = v10 ? nz(r.marginPct ?? 0) : 0
+  const fail = base * failPct / 100
+  const margin = (base + fail) * marginPct / 100
+  const baseTotal = base + fail + margin
   const invoiceExtra = baseTotal * (invoiceMult - 1)
   const subtotal = baseTotal + invoiceExtra - discount
   const minOrderApplied = subtotal > 0 && subtotal < r.minOrder
   const netBeforeRounding = Math.max(0, minOrderApplied ? r.minOrder : subtotal)
   const step = nz(r.roundTo)
-  const net = step > 0 && netBeforeRounding > 0 ? Math.ceil(Math.round(netBeforeRounding * 100) / 100 / step) * step : netBeforeRounding
+  const up = (x: number) => (step > 0 && x > 0 ? Math.ceil(Math.round(x * 100) / 100 / step) * step : x)
+  const vatF = s.business.vatEnabled ? nz(s.business.vatPct) / 100 : 0
+  let net: number, vat: number, gross: number
+  if (v10 && vatF > 0) { gross = up(netBeforeRounding * (1 + vatF)); net = gross / (1 + vatF); vat = gross - net } // DDV pred zaokroževanjem
+  else { net = up(netBeforeRounding); vat = net * vatF; gross = net + vat }
   const rounding = net - netBeforeRounding
-  const vat = s.business.vatEnabled ? net * (s.business.vatPct / 100) : 0
-  const gross = net + vat
   const perPiece = on && nz(j.pieces) > 0 ? gross / j.pieces : gross
 
   // Moj strošek: material, elektrika, obraba, potrošni, rezerva + prevoz/pakiranje/dostava
@@ -135,7 +158,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const belowTarget = laborHours > 0 && earningsPerHour < s.business.targetHourly
 
   return {
-    printHours, kg, powerW, material, electricity, wear, consumables, otherDirect, adhesive, adhesiveLabel,
+    printHours, kg, powerW, material, materialSale, saleBonus, wastePct, wasteG, base, fail, failPct, margin, marginPct, electricity, wear, consumables, otherDirect, adhesive, adhesiveLabel,
     printBeforeReserve, reserve, printCost, printOverridden, markup, printSale,
     printMarginPct: printSale > 0 ? (markup / printSale) * 100 : 0,
     servicesStandard, servicesDiscount, services, digital, profit, laborHours, baseTotal, invoiceMult, invoiceExtra,

@@ -39,6 +39,10 @@ export interface Rates {
   fileAddonStep: number
   /** privzeto lepilo za ASA/ABS/PC/najlon/CF: € na tisk */
   adhesiveDefault: number
+  /** v10: odpad/purge % gramov (brim, podpore, INDX menjava orodja) – manjka = stari cenik brez pribitkov */
+  wastePct?: number
+  /** v10: marža % na osnovo + rezervo (cena za stranko); manjka = stari cenik (rezerva samo v mojem strošku) */
+  marginPct?: number
   /** v4: tisk po fiksni ceni na uro tiskalnika (material posebej po strošku) */
   printHourly: number
   /** v4: ena postavka za moje delo (sken, obdelava, CAD, slicer, dodelava) */

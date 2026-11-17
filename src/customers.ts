@@ -1,5 +1,5 @@
 import type { Customer, CustomerPricing, JobInput, Project, Settings } from './types'
-import { calculate, effSettings, pricePerKg } from './calc'
+import { calculate, effSettings, pricePerKg, regularPerKg } from './calc'
 import type { QuickInput } from './quick'
 import { uid } from './format'
 
@@ -17,7 +17,7 @@ export function lastPricing(projects: Project[], id: string) {
   return {
     mode: p.input.mode, materialId: p.input.materialId, reservePct: p.input.reservePct, markupPct: p.input.markupPct, fileSale: { ...p.input.fileSale },
     rates: { printHourly: s.rates.printHourly, labourHourly: s.rates.labourHourly, fileAddonStl: s.rates.fileAddonStl, fileAddonStep: s.rates.fileAddonStep },
-    matKg: p.input.quickMatKg ?? (mat ? pricePerKg(mat) : undefined), quickMarkupPct: p.input.quickMarkupPct, from: p,
+    matKg: p.input.quickMatKg ?? (mat ? regularPerKg(mat) : undefined), quickMarkupPct: p.input.quickMarkupPct, from: p,
   }
 }
 

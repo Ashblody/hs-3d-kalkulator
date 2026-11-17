@@ -2,7 +2,7 @@ import type { Material, Printer, Settings, Rates, Business } from './types'
 import MaterialInfoCard from './MaterialInfoCard'
 import { pricePerKg, wearPerHour } from './calc'
 import { eur, num, uid } from './format'
-import { Check, NumField, TextField } from './ui'
+import { Check, NumField, TextField, Tip, TIPS } from './ui'
 import { defaultSettings } from './seed'
 
 export default function SettingsView({ s, onChange }: { s: Settings; onChange: (s: Settings) => void }) {
@@ -24,7 +24,9 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
           <NumField label="Minimalno naročilo" value={s.rates.minOrder} onChange={setR('minOrder')} suffix="€" />
           <NumField label="Cena elektrike" value={s.business.kwhPrice} onChange={setB('kwhPrice')} suffix="€/kWh" />
           <NumField label="Privzeto lepilo (ASA/ABS/PC/najlon/CF)" value={s.rates.adhesiveDefault ?? 0.5} onChange={setR('adhesiveDefault')} suffix="€/tisk" />
-          <NumField label="Privzeta rezerva" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" />
+          <div><NumField label="Rezerva za neuspele tiske (privzeto, v ceni)" value={s.rates.reservePct} onChange={setR('reservePct')} suffix="%" /><Tip text={TIPS.fail} /></div>
+          <div><NumField label="Odpad / purge (k gramom)" value={s.rates.wastePct ?? 0} onChange={setR('wastePct')} suffix="%" /><Tip text={TIPS.waste} /></div>
+          <div><NumField label="Marža (na osnovo + rezervo)" value={s.rates.marginPct ?? 0} onChange={setR('marginPct')} suffix="%" /><Tip text={TIPS.margin} /></div>
           <label className="block"><span className="lbl">Zaokroževanje končne cene navzgor (Hitri in Podroben)</span>
             <select className="inp" value={s.rates.roundTo} onChange={(e) => setR('roundTo')(Number(e.target.value))}><option value={0}>Brez</option><option value={1}>1 €</option><option value={5}>5 €</option></select></label>
           <NumField label="Doplačilo: STL zraven tiska" value={s.rates.fileAddonStl} onChange={setR('fileAddonStl')} suffix="€" />
@@ -40,7 +42,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
           <NumField label="Prispevki in administracija" value={s.business.monthlyFixed} onChange={setB('monthlyFixed')} suffix="€/mes" />
           <NumField label="Davčna rezerva (od prihodka)" value={s.business.taxPct} onChange={setB('taxPct')} suffix="%" />
           <NumField label="Stopnja DDV" value={s.business.vatPct} onChange={setB('vatPct')} suffix="%" />
-          <div className="col-span-2"><Check label="Obračunavam DDV" checked={s.business.vatEnabled} onChange={setB('vatEnabled')} /></div>
+          <div className="col-span-2"><Check label="Obračunavam DDV (privzeto izklopljeno)" checked={s.business.vatEnabled} onChange={setB('vatEnabled')} /><Tip text={TIPS.vat} /></div>
         </div>
         <p className="text-xs text-slate-500 mt-2">Davčna rezerva je privzeto 0 %, ker je odvisna od tvojega statusa (normiranec, dejanski stroški). Vnesi svojo oceno.</p>
       </details>

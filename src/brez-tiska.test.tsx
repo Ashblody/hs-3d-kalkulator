@@ -13,7 +13,7 @@ import { quoteData } from './quoteData'
 import { normalize, initialState } from './store'
 import type { JobInput, Project, Settings } from './types'
 
-const S = (): Settings => defaultSettings()
+const S = (): Settings => legacyPricing(defaultSettings())
 const scanJob = (extra: Partial<JobInput> = {}): JobInput => ({ ...demoJob(), mode: 'osebno', printing: false, ...extra })
 
 describe('Brez tiska: izračun', () => {
@@ -132,6 +132,7 @@ describe('Brez tiska: vmesnik', () => {
 })
 
 import Dashboard from './Dashboard'
+import { legacyPricing } from './calc'
 describe('Brez tiska: Posel', () => {
   it('projekt brez tiska šteje v prihodke, brez NaN', () => {
     const s = S(); const d = new Date(); const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-05`

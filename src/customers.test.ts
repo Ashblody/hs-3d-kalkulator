@@ -4,7 +4,7 @@ import { initialState, newProject, normalize } from './store'
 import { applyCustomer, applyCustomerQuick, customerTotals, newCustomer } from './customers'
 import { mergeStates } from './backup'
 import { quickCalc, quickDefaults, quickToProject } from './quick'
-import { calculate } from './calc'
+import { legacyPricing, calculate } from './calc'
 import { blankJob } from './seed'
 
 describe('stranke', () => {
@@ -27,7 +27,7 @@ describe('stranke', () => {
     expect(j).toMatchObject({ customerId: c.id, client: 'Robert', mode: 'poslovno', reservePct: 25, fileSale: { kind: 'step' } })
     expect(j.rateOverride).toMatchObject({ printHourly: 5, labourHourly: 30 })
     expect(j.rateOverride).not.toHaveProperty("roundTo")
-    const a = calculate({ ...j, scanH: 1 }, st.settings), b = calculate({ ...j, scanH: 0 }, st.settings)
+    const a = calculate({ ...j, scanH: 1 }, legacyPricing(st.settings)), b = calculate({ ...j, scanH: 0 }, legacyPricing(st.settings))
     expect(a.netBeforeRounding - b.netBeforeRounding).toBeCloseTo(60, 1) // 30 €/h × 2 (poslovno)
   })
   it('zgodovina in vsote', () => {
@@ -50,7 +50,7 @@ describe('Uredi stranko – shranjen cenik', () => {
     expect(applyCustomerQuick(quickDefaults, c, [])).toMatchObject({ printRate: 4, workRate: 25, matKg: 35, markupPct: 15, business: true })
     const j = applyCustomer(blankJob(), c, [], st.settings)
     expect(j).toMatchObject({ mode: 'poslovno', fileSale: { kind: 'stl' }, rateOverride: { printHourly: 4, labourHourly: 25 } })
-    const a = calculate({ ...j, scanH: 1 }, st.settings), b = calculate(j, st.settings)
+    const a = calculate({ ...j, scanH: 1 }, legacyPricing(st.settings)), b = calculate(j, legacyPricing(st.settings))
     expect(a.netBeforeRounding - b.netBeforeRounding).toBeCloseTo(50, 2)
   })
   it('ročni popravek povozi zadnji projekt, ostalo ostane', () => {

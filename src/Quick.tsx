@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import type { Customer, JobInput, Project, Settings } from './types'
 import { CustomerPicker } from './CustomersView'
 import { applyCustomerQuick } from './customers'
-import { copyText, quickPrinting, quickToProject, quickCalc, quickCompare, quickDefaults, quickFloor, quickText, type QuickInput } from './quick'
+import { copyText, quickExtras, quickPrinting, quickToProject, quickCalc, quickCompare, quickDefaults, quickFloor, quickText, type QuickInput } from './quick'
 import { eur, num } from './format'
-import { Check, HoursField, NumField, Row } from './ui'
+import { Check, HoursField, NumField, Row, TIPS } from './ui'
 import { BARE_WORK } from './duration'
 import FloorBox from './FloorBox'
 
@@ -17,7 +17,7 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
   const [name, setName] = useState('')
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(q)) }, [q])
   const set = (k: keyof QuickInput) => (v: number | boolean) => setQ({ ...q, [k]: v })
-  const qq: QuickInput = { ...q, roundTo: settings.rates.roundTo }
+  const qq: QuickInput = { ...q, ...quickExtras(settings), roundTo: settings.rates.roundTo }
   const on = quickPrinting(q)
   const r = quickCalc(qq); const c = quickCompare(q, settings)
   return (
@@ -37,7 +37,10 @@ export default function Quick({ settings, flash, onSave, customers, projects, on
       </div>
       <div className="space-y-4 self-start">
         <div className="card">
-          {on && <><Row l={`Tiskanje ${num(q.printH)} h × ${num(q.printRate)} €/h`} v={eur(r.print)} /><Row l={`Material ${num(q.grams)} g × ${num(q.matKg)} €/kg`} v={eur(r.material)} /></>}<Row l={`Delo ${num(q.workH)} h × ${num(q.workRate)} €/h`} v={eur(r.work)} /><Row l="Pribitek" v={eur(r.markup)} />
+          {on && <><Row l={`Tiskanje ${num(q.printH)} h × ${num(q.printRate)} €/h`} v={eur(r.print)} /><Row l={`Material ${num(q.grams + r.wasteG)} g × ${num(q.matKg)} €/kg${r.wasteG > 0 ? ` (z odpadom ${num(qq.wastePct ?? 0)} %)` : ''}`} v={eur(r.material)} info={r.wasteG > 0 ? TIPS.waste : undefined} /></>}<Row l={`Delo ${num(q.workH)} h × ${num(q.workRate)} €/h`} v={eur(r.work)} /><Row l="Pribitek" v={eur(r.markup)} />
+          {r.fail > 0 && <Row l={`Rezerva za neuspele tiske ${num(qq.failPct ?? 0)} %`} v={eur(r.fail)} info={TIPS.fail} />}
+          {r.margin > 0 && <Row l={`Marža ${num(qq.marginPct ?? 0)} %`} v={eur(r.margin)} info={TIPS.margin} />}
+          {r.vat > 0 && <Row l={`DDV ${num(qq.vatPct ?? 0)} %`} v={eur(r.vat)} info={TIPS.vat} />}
           {r.rounding > 0 && <Row l={`Zaokroženo navzgor na ${settings.rates.roundTo} € (${eur(r.exact)})`} v={`+${eur(r.rounding)}`} />}
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-bold">KONČNA CENA</span><span className="text-3xl font-black tabular-nums" data-testid="quick-total">{eur(r.total)}</span></div>
           {q.business && <div className="flex justify-between items-baseline"><span className="font-semibold">Poslovne stranke (2×)</span><span className="text-2xl font-black tabular-nums text-emerald-600" data-testid="quick-business">{eur(r.business)}</span></div>}

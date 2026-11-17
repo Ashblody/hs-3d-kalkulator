@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Customer, JobInput, Project, Settings, Status } from './types'
 import { defaultSettings, demoJob, emptyJob, materials as seedV1, materialsV1Ids, materialsV2, blankJob, ratesV1, withAdhesive, rates as ratesNow } from './seed'
 import { uid } from './format'
+import { legacyPricing } from './calc'
 import { applyImport, IMPORT_ID } from './importXlsx'
 
 export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; deleted?: string[]; migrations?: string[]; current: JobInput; currentId: string | null; dark: boolean }
@@ -95,7 +96,7 @@ export function normalize(raw: unknown): AppState {
   return applyImport({
     version: 1,
     settings: { ...base.settings, ...r.settings, materials: withAdhesive(materials, storedRates.adhesiveDefault), materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 9, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
-    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, materials: (p.snapshot.materials ?? []).map((m) => (m.adhesive === undefined ? { ...m, adhesive: 0 } : m)), rates: dropOldRates({ ...base.settings.rates, ...p.snapshot.rates, ...(migrateRound && p.snapshot.rates?.roundTo === 5 ? { roundTo: storedRates.roundTo } : {}) }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
+    projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, materials: (p.snapshot.materials ?? []).map((m) => (m.adhesive === undefined ? { ...m, adhesive: 0 } : m)), rates: dropOldRates({ ...legacyPricing(base.settings).rates, ...p.snapshot.rates, ...(migrateRound && p.snapshot.rates?.roundTo === 5 ? { roundTo: storedRates.roundTo } : {}) }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
     deleted: Array.isArray(r.deleted) ? r.deleted.filter((x) => typeof x === 'string') : [],
     migrations: Array.isArray(r.migrations) ? r.migrations.filter((x) => typeof x === 'string') : [],
     customers: Array.isArray(r.customers) ? r.customers.filter((c) => c && c.id && c.name) : [],

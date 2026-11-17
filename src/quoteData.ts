@@ -26,6 +26,8 @@ export function quoteData(job: JobInput, settings0: Settings, customer?: Custome
   if (oth > 0) lines.push(['Ostali stroški', '', oth * disc])
   if (r.discount > 0) lines.push(['Popust', '', -r.discount])
   const totals: [string, number][] = []
+  if (r.fail > 0.004) totals.push([`Rezerva za neuspele tiske ${num(r.failPct)} %`, r.fail * disc])
+  if (r.margin > 0.004) totals.push([`Marža ${num(r.marginPct)} %`, r.margin * disc])
   if (r.minOrderApplied) totals.push(['Minimalno naročilo', settings.rates.minOrder])
   if (r.rounding > 0.004) totals.push(['Zaokroženo', r.rounding])
   totals.push(['Skupaj brez DDV', r.net])
