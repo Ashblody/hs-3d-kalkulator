@@ -60,7 +60,7 @@ export async function buildPdf(job: JobInput, settings: Settings, id: string, cu
   doc.setFont('DV', 'bold'); doc.setFontSize(13); doc.text('ZA PLAČILO', 120, y); doc.text(eurPdf(r.gross), R - 2, y, { align: 'right' }); y += 5
   doc.setFont('DV', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139); doc.text(`${eurPdf(r.perPiece)} na kos · ${modeLabel}`, R - 2, y, { align: 'right' }); y += 12
   doc.setTextColor(15, 23, 42)
-  if (!settings.business.vatEnabled) { doc.text('DDV ni obračunan na podlagi 1. odstavka 94. člena ZDDV-1.', L, y); y += 5 }
+  if (!settings.business.vatEnabled) { doc.text('DDV v izračunu ni vključen.', L, y); y += 5 }
   doc.text(`Digitalne pravice: ${rights}.`, L, y)
   return doc.output('blob')
 }

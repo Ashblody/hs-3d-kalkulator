@@ -26,7 +26,7 @@ export default function Quote({ job, settings, number }: { job: JobInput; settin
         <div className="flex justify-between text-lg font-bold border-t-2 border-black mt-1 pt-1"><span>ZA PLAČILO</span><span>{eur(r.gross)}</span></div>
         <div className="text-xs text-slate-500 text-right">{eur(r.perPiece)} na kos</div>
       </div>
-      {!settings.business.vatEnabled && <p className="mt-6 text-xs">DDV ni obračunan na podlagi 1. odstavka 94. člena ZDDV-1.</p>}
+      {!settings.business.vatEnabled && <p className="mt-6 text-xs">DDV v izračunu ni vključen.</p>}
       {rights.length > 0 && <p className="mt-2 text-xs">Digitalne pravice: {rights.join(', ')}.</p>}
     </div>
   )

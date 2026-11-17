@@ -120,7 +120,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             <div className="mt-2 text-slate-600 dark:text-slate-300">Razlika {d >= 0 ? '+' : ''}{eur(d)} (Podroben upošteva še lepilo/potrošni material{r.digital ? ', datoteko' : ''}{r.transport ? ', prevoz' : ''} in zaokroževanje).</div></div> })()}
         {errors.length > 0 && <div className="card !ring-red-400 text-sm text-red-600">{errors.map((e) => <div key={e}>{e}</div>)}</div>}
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><Big label={`Končna cena – ${job.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}`} tone="green" value={eur(r.gross)} sub={settings.business.vatEnabled ? `brez DDV ${eur(r.net)} · DDV ${eur(r.vat)}` : 'DDV ni obračunan (mali davčni zavezanec)'} /></div>
+          <div className="col-span-2"><Big label={`Končna cena – ${job.mode === 'poslovno' ? 'Poslovno' : 'Osebno'}`} tone="green" value={eur(r.gross)} sub={settings.business.vatEnabled ? `brez DDV ${eur(r.net)} · DDV ${eur(r.vat)}` : 'DDV v izračunu ni vključen'} /></div>
           {showPrint ? <>
           <Big label="Cena na kos" value={eur(r.perPiece)} />
           <Big label="Moj strošek tiska" value={eur(r.printCost)} tone="slate" sub={r.printOverridden ? 'ročno določeno · ni v ceni, samo zame' : 'ni v ceni, samo zame'} /></> : <div className="col-span-2"><Big label="Brez tiska" value="samo storitve" tone="slate" sub="material, elektrika in obraba se ne štejejo" /></div>}
