@@ -61,6 +61,8 @@ export const materialsV2: Material[] = [
   // 17. 11. 2026 s strani (z DDV): PC-ABS tudi 500 g 26,98 / akcija 21,58 €
   x('tr2-pcabs', 'Trček PC-ABS V0 (1 kg)', 'Plastika Trček', 'PC-ABS', 1000, 39.98, ['Akcija -20 %', 31.98], TR + 'pc-abs-v0-filament', '65 °C, 4–6 h'),
   x('tr2-asacf', 'Trček ASA-CF (800 g)', 'Plastika Trček', 'ASA-CF', 800, 27.89, ['Akcija -15 %', 23.71], TR + 'asa-carbon-fibre-filament', '65–70 °C, 2–4 h'),
+  // 17. 11. 2026 s strani (z DDV): 800 g redna 21,90 €, akcija 12,05 € (2,1 kg: 48,00 / 26,40 €)
+  x('tr3-asaplus', 'Trček ASA Plus (800 g)', 'Plastika Trček', 'ASA', 800, 21.9, ['Akcija -45 %', 12.05], TR + 'asa-plus-filament', '60 °C, 4–8 h'),
 ]
 export const materialsV1Ids = materials.map((m) => m.id)
 

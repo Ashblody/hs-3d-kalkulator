@@ -1,4 +1,5 @@
 import type { Material, Printer, Settings, Rates, Business } from './types'
+import MaterialInfoCard from './MaterialInfoCard'
 import { pricePerKg, wearPerHour } from './calc'
 import { eur, num, uid } from './format'
 import { Check, NumField, TextField } from './ui'
@@ -82,6 +83,7 @@ export default function SettingsView({ s, onChange }: { s: Settings; onChange: (
                 <TextField label="Temp. sušenja" value={m.dryTemp ?? ''} onChange={(dryTemp) => setM(i, { dryTemp })} />
                 <NumField label="Lepilo (0 = brez)" value={m.adhesive ?? 0} onChange={(adhesive) => setM(i, { adhesive })} suffix="€/tisk" />
               </div>
+              <MaterialInfoCard id={m.id} className="mt-2" />
               <div className="mt-2 space-y-2">
                 {m.prices.map((pr, k) => (
                   <div key={k} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-end">

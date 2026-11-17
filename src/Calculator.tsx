@@ -1,5 +1,6 @@
 import type { JobInput, Settings } from './types'
 import FloorBox from './FloorBox'
+import MaterialInfoCard from './MaterialInfoCard'
 import { allTiers, TIERS, calculate, isPrinting, jobFloor, fileSaleInfo, pricePerKg, validateJob, wearPerHour, powerFor } from './calc'
 import { eur, num } from './format'
 import { Big, Check, HoursField, NumField, Row, Section, Select, TextField, TimeField } from './ui'
@@ -37,6 +38,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
           <Section title="3D-tiskanje">
             <Select label="Tiskalnik" value={job.printerId} onChange={set('printerId')} options={settings.printers.map((p) => [p.id, p.name])} />
             <Select label="Material" value={job.materialId} onChange={set('materialId')} options={settings.materials.map((m) => [m.id, `${m.name} (${num(pricePerKg(m))} €/kg)`])} />
+            <MaterialInfoCard id={job.materialId} className="col-span-2 sm:col-span-3 sm:order-none" />
             <NumField label="Število kosov" value={job.pieces} onChange={(v) => set('pieces')(Math.max(1, Math.round(v)))} min={1} />
             <div className="col-span-2 sm:col-span-3"><Check label="Vnos po ploščah iz slicerja (Bambu Studio / PrusaSlicer)" checked={job.usePlates} onChange={(v) => onChange({ ...job, usePlates: v, plates: v && !job.plates.length ? [{ hours: 0, minutes: 0, grams: 0, materialId: job.materialId }] : job.plates })} /></div>
             {job.usePlates ? (
