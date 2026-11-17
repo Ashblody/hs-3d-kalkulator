@@ -22,7 +22,7 @@ export function initialState(): AppState {
 /** nova naprava brez podatkov: brez demo projekta, z uvoženimi opravljenimi projekti */
 export const freshState = (): AppState => applyImport({ ...initialState(), projects: [], current: demoJob(), currentId: null, migrations: [] })
 
-const statusMap: Record<string, Status> = { ponudba: 'ponudba', osnutek: 'ponudba', sprejeto: 'sprejeto', potrjeno: 'sprejeto', izdelava: 'sprejeto', natisnjeno: 'natisnjeno', zakljuceno: 'natisnjeno', placano: 'placano', opravljeno: 'opravljeno' }
+const statusMap: Record<string, Status> = { neznano: 'neznano', ponudba: 'ponudba', osnutek: 'ponudba', sprejeto: 'sprejeto', potrjeno: 'sprejeto', izdelava: 'sprejeto', natisnjeno: 'natisnjeno', zakljuceno: 'natisnjeno', placano: 'placano', opravljeno: 'opravljeno' }
 export const migrateStatus = (s: string | undefined): Status => statusMap[s ?? ''] ?? 'ponudba'
 
 /** Podvoji projekt kot nov (ime + ' (kopija)', status Ponudba, trenutni cenik) */

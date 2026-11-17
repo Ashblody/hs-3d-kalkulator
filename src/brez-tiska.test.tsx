@@ -126,7 +126,7 @@ describe('Brez tiska: vmesnik', () => {
   })
   it('Projekti: kartica brez tiska ne kaže gramov', () => {
     const s = S(); const p = { id: 'a', status: 'sprejeto', createdAt: '', updatedAt: '', input: scanJob(), snapshot: s, actual: { printHours: 0, grams: 0, laborHours: 0 } } as unknown as Project
-    cleanup(); render(<ProjectsView projects={[p]} currentId={null} onOpen={() => {}} onCopy={() => {}} onDelete={() => {}} onStatus={() => {}} onActual={() => {}} onPdf={() => {}} onExport={() => {}} />)
+    cleanup(); render(<ProjectsView projects={[p]} currentId={null} onOpen={() => {}} onCopy={() => {}} onDelete={() => {}} onStatus={() => {}} onActual={() => {}} onTracking={() => {}} onPdf={() => {}} onExport={() => {}} />)
     expect(document.body.textContent).toMatch(/brez tiska · [\d,]+ h dela/); expect(document.body.textContent).not.toMatch(/ g · | h tiska/)
   })
 })

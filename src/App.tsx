@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Calculator from './Calculator'
 import SettingsView from './SettingsView'
 import ProjectsView from './ProjectsView'
+import { makeExampleProjects } from './exampleProjects'
 import { duplicateProject, hasUnsaved, isRenamed, newProject, saveCurrent, startBlank, toPodroben, usePersistentState } from './store'
 import type { JobInput, Project, Settings } from './types'
 import Dashboard from './Dashboard'
@@ -95,10 +96,15 @@ export default function App() {
               onCreate={(c) => setSt((s) => ({ ...s, customers: [...s.customers, c] }))}
               onPick={(c) => setSt((s) => ({ ...s, current: applyCustomer(s.current, c, s.projects, project ? project.snapshot : s.settings) }))} />} />
         </>)}
-        {tab === 'projekti' && <><ProjectsView projects={st.projects} currentId={st.currentId} onOpen={open} onCopy={copy}
+        {tab === 'projekti' && <><div className="card mb-3 flex flex-wrap gap-2 items-center"><button className="btn" onClick={() => {
+          const added = makeExampleProjects(st.settings, st.projects)
+          if (!added.length) { flash('Projekta 0002 in 0003 že obstajata'); return }
+          setSt(s => ({ ...s, projects: [...s.projects, ...added] })); flash(`Dodanih projektov: ${added.length}. Preveri približne podatke.`)
+        }}>Dodaj primera 0002 in 0003</button><span className="text-xs text-slate-500">Dodajo se le manjkajoči primeri; status in približni podatki ostanejo označeni.</span></div><ProjectsView projects={st.projects} currentId={st.currentId} onOpen={open} onCopy={copy}
           onDelete={(p) => setSt({ ...st, deleted: [...(st.deleted ?? []), p.id], projects: st.projects.filter((x) => x.id !== p.id), currentId: st.currentId === p.id ? null : st.currentId })}
           onPdf={(p) => printQuote(p.input, p.snapshot, p.id)} onExport={(p, k) => doExport(p.input, p.snapshot, p.id, k)}
           onActual={(p, actual) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, actual, updatedAt: new Date().toISOString() } : x)) })}
+          onTracking={(p, tracking) => setSt(s => ({ ...s, projects: s.projects.map(x => x.id === p.id ? { ...x, tracking, updatedAt: new Date().toISOString() } : x) }))}
           onStatus={(p, status) => setSt({ ...st, projects: st.projects.map((x) => (x.id === p.id ? { ...x, status, updatedAt: new Date().toISOString() } : x)) })} />
           {!!st.projectHistory?.length && <details className="card mt-4">
             <summary className="cursor-pointer font-semibold">Ohranjene različice projektov ({st.projectHistory.length})</summary>
@@ -107,7 +113,7 @@ export default function App() {
               <div><div className="font-medium">{p.input.name || '(brez imena)'}</div><div className="text-xs text-slate-500">Zadnja sprememba: {p.updatedAt ? new Date(p.updatedAt).toLocaleString('sl-SI') : 'ni znana'}</div></div>
               <button className="btn" onClick={() => {
                 const restored = newProject({ ...structuredClone(p.input), name: `${p.input.name || 'Projekt'} (obnovljena različica)` }, p.snapshot)
-                restored.status = p.status; restored.actual = structuredClone(p.actual)
+                restored.status = p.status; restored.actual = structuredClone(p.actual); restored.tracking = structuredClone(p.tracking)
                 setSt(s => ({ ...s, projects: [...s.projects, restored], current: structuredClone(restored.input), currentId: restored.id }))
                 setTab('kalk'); flash('Različica obnovljena kot nov projekt s shranjenim cenikom')
               }}>Obnovi kot nov projekt</button>

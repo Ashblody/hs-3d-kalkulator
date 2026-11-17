@@ -1,7 +1,7 @@
 /** Osebno = na roke; Poslovno = z računom (× invoiceMultiplier) */
 export type Mode = 'osebno' | 'poslovno'
 export type OrderType = 'tisk' | 'sken' | 'cad' | 'kombinirano' | 'digitalno'
-export type Status = 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano' | 'opravljeno'
+export type Status = 'neznano' | 'ponudba' | 'sprejeto' | 'natisnjeno' | 'placano' | 'opravljeno'
 /** plošča iz slicerja (Bambu Studio / PrusaSlicer) */
 export type MaterialRole = 'support' | 'interface' | 'other'
 export interface PlateMaterial { role: MaterialRole; grams: number; materialId: string }
@@ -161,6 +161,16 @@ export interface CustomerPricing { mode?: 'osebno' | 'poslovno'; printHourly?: n
 
 export interface Actuals { printHours: number; grams: number; laborHours: number }
 
+export type WorkflowStage = 'scan' | 'mesh' | 'cad' | 'export' | 'slicer' | 'print' | 'finish' | 'handover'
+export type WorkflowStatus = 'unknown' | 'todo' | 'doing' | 'done' | 'not_needed'
+export interface ProjectTracking {
+  code?: string
+  completedDate?: string
+  notes?: string
+  links?: string
+  stages?: Partial<Record<WorkflowStage, WorkflowStatus>>
+}
+
 export interface Project {
   id: string
   status: Status
@@ -170,4 +180,5 @@ export interface Project {
   /** posnetek cenika ob shranjevanju */
   snapshot: Settings
   actual: Actuals
+  tracking?: ProjectTracking
 }
