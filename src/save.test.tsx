@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as any
 import { describe, it, expect } from 'vitest'
-import { render, fireEvent, screen, cleanup } from '@testing-library/react'
+import { render, fireEvent, screen, cleanup, within } from '@testing-library/react'
 import { freshState, saveCurrent, startBlank, type AppState } from './store'
 import { applySynced } from './DriveSync'
 import { mergeStates } from './backup'
@@ -47,7 +47,7 @@ describe('Shranjevanje nikoli ne prepiše drugega projekta', () => {
 })
 
 describe('App: gumbi', () => {
-  it('A → Nov projekt → B ustvari dva projekta; preimenovanje ne prepiše', async () => {
+  it('shrani → prazen obrazec; odpri, uredi, shrani → posodobljen brez dvojnika', async () => {
     cleanup(); localStorage.clear()
     const App = (await import('./App')).default
     render(<App />)
@@ -56,15 +56,23 @@ describe('App: gumbi', () => {
     const stored = () => JSON.parse(localStorage.getItem('hs3d-kalkulator-v1')!) as AppState
     fireEvent.change(nameInp(), { target: { value: 'parket' } })
     fireEvent.click(screen.getByText('Shrani kot nov projekt'))
-    expect(screen.getByTestId('editing').textContent).toContain('parket')
-    fireEvent.click(screen.getByText('Nov projekt'))
+    // po shranjevanju: prazen nov projekt, brez vezave
+    expect(nameInp().value).toBe(''); expect(screen.queryByTestId('editing')).toBeNull(); expect(stored().currentId).toBeNull()
     fireEvent.change(nameInp(), { target: { value: 'B' } })
     fireEvent.click(screen.getByText('Shrani kot nov projekt'))
-    // brez Nov projekt: samo spremeni ime in shrani → še en nov projekt
-    fireEvent.change(nameInp(), { target: { value: 'C' } })
-    fireEvent.click(screen.getByText('Shrani kot nov projekt'))
-    const s = stored(); const ids = ['parket', 'B', 'C'].map((n) => named(s, n).map((p) => p.id))
-    expect(ids.map((x) => x.length)).toEqual([1, 1, 1]); expect(new Set(ids.flat()).size).toBe(3)
+    // prazen obrazec se ne shrani
+    const n0 = stored().projects.length
+    fireEvent.click(screen.getByText('Shrani kot nov projekt')); expect(stored().projects.length).toBe(n0)
+    // odpri parket, uredi, shrani → posodobljen, brez dvojnika, obrazec spet prazen
+    fireEvent.click(screen.getByText('Projekti'))
+    const card = screen.getByText('parket').closest('.card') as HTMLElement
+    fireEvent.click(within(card).getByText('Odpri'))
+    expect(screen.getByTestId('editing').textContent).toContain('parket')
+    const kos = screen.getByText('Število kosov').parentElement!.querySelector('input')!
+    fireEvent.focus(kos); fireEvent.change(kos, { target: { value: '4' } }); fireEvent.blur(kos)
+    fireEvent.click(screen.getByText(/Shrani spremembe v/))
+    expect(nameInp().value).toBe('')
+    const s = stored(); expect(named(s, 'parket')).toHaveLength(1); expect(named(s, 'parket')[0].input.pieces).toBe(4); expect(named(s, 'B')).toHaveLength(1)
   })
 })
 

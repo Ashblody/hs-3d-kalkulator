@@ -47,10 +47,11 @@ export default function App() {
   const calcSettings = effSettings(st.current, { ...calcBase, rates: { ...calcBase.rates, roundTo: st.settings.rates.roundTo } })
   const custOf = (j: JobInput) => (st.customers ?? []).find((c) => c.id === j.customerId)
 
+  // po shranjevanju vedno nov prazen projekt (praznega obrazca ne shranimo)
   const save = (asNew = false) => {
-    const r = saveCurrent(st, asNew)
-    setSt((s) => (s === st ? r.state : saveCurrent(s, asNew).state))
-    flash(r.created ? `Shranjeno kot nov projekt: ${st.current.name || 'brez imena'}` : 'Projekt shranjen')
+    if (!project && !hasUnsaved(st)) { flash('Obrazec je prazen – ni kaj shraniti.'); return }
+    setSt((s) => startBlank(saveCurrent(s, asNew).state))
+    flash(`Shranjeno »${st.current.name || 'brez imena'}«. Začel sem nov prazen projekt.`)
   }
   const open = (p: Project) => { setSt({ ...st, current: structuredClone(p.input), currentId: p.id }); setTab('kalk') }
   const copy = (p: Project) => {

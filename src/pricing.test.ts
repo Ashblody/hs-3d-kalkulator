@@ -65,3 +65,12 @@ describe('stari projekti po nalaganju', () => {
     expect(calculate(back.projects[0].input, back.projects[0].snapshot).net).toBe(calculate(job, old).net)
   })
 })
+
+describe('marža na projektu', () => {
+  it('privzeto iz Nastavitev, polje projekta jo povozi; stari cenik je ne uporabi', () => {
+    expect(calculate(job, defaultSettings()).marginPct).toBe(20)
+    const r = calculate({ ...job, marginPct: 30 }, defaultSettings())
+    expect(r.marginPct).toBe(30); expect(r.margin).toBeCloseTo((r.base + r.fail) * 0.3, 9)
+    expect(calculate({ ...job, marginPct: 30 }, legacyPricing(defaultSettings())).margin).toBe(0)
+  })
+})

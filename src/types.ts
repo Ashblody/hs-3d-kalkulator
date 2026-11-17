@@ -100,6 +100,8 @@ export interface JobInput {
   extraMaterialG: number
   consumables: number
   otherDirect: number
+  /** marža % za ta projekt (v10); manjka = vrednost iz cenika (Nastavitve / posnetek projekta) */
+  marginPct?: number
   reservePct: number
   markupPct: number
   printCostOverride: number | null

@@ -130,7 +130,7 @@ export function calculate(j0: JobInput, s0: Settings): Result {
   const discount = nz(j.discount)
   // vrstni red (v10): osnova → + rezerva za neuspele tiske % → + marža % → (Poslovno ×) → − popust → min. naročilo → (DDV) → zaokroževanje
   const base = printSale + services + digital + transport + packaging + delivery + otherCosts
-  const failPct = v10 ? nz(j.reservePct) : 0, marginPct = v10 ? nz(r.marginPct ?? 0) : 0
+  const failPct = v10 ? nz(j.reservePct) : 0, marginPct = v10 ? nz(j.marginPct ?? r.marginPct ?? 0) : 0
   const fail = base * failPct / 100
   const margin = (base + fail) * marginPct / 100
   const baseTotal = base + fail + margin

@@ -64,6 +64,7 @@ export default function Calculator({ job, settings, onChange, actions, customerS
             {job.extraMaterialG > 0 && <NumField label="Dodatna poraba (stari vnos)" value={job.extraMaterialG} onChange={set('extraMaterialG')} suffix="g" />}
             <NumField label="Potrošni material (drugo)" value={job.consumables} onChange={set('consumables')} suffix="€" />
             <div><NumField label={isV10(settings) ? 'Rezerva za neuspele tiske (v ceni)' : 'Rezerva za neuspele tiske'} value={job.reservePct} onChange={set('reservePct')} suffix="%" />{isV10(settings) && <Tip text={TIPS.fail} />}</div>
+            {isV10(settings) && <div><NumField label="Marža (ta projekt)" value={job.marginPct ?? settings.rates.marginPct ?? 0} onChange={set('marginPct')} suffix="%" /><Tip text={TIPS.margin} /></div>}
             <div className="col-span-2 sm:col-span-3 text-xs text-slate-500 dark:text-slate-400">
               {r.adhesive > 0 && <span className="text-sky-600 dark:text-sky-300">Lepilo ({r.adhesiveLabel}) {eur(r.adhesive)} se doda samodejno · </span>}
               Teža iz slicerja (skupaj s podporami in purge) · čas skupaj {num(r.printHours)} h · filament {num(r.kg * 1000)} g · moč {num(r.powerW)} W{printer && !r.powerW ? ' (vnesi moč v Nastavitvah)' : ''} · amortizacija {printer ? num(wearPerHour(printer)) : 0} €/h
