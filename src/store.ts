@@ -5,7 +5,7 @@ import { uid } from './format'
 import { legacyPricing } from './calc'
 import { applyImport, IMPORT_ID } from './importXlsx'
 
-export interface AppState { version: 1; settings: Settings; projects: Project[]; customers: Customer[]; deleted?: string[]; migrations?: string[]; current: JobInput; currentId: string | null; dark: boolean }
+export interface AppState { version: 1; settings: Settings; projects: Project[]; projectHistory?: Project[]; customers: Customer[]; deleted?: string[]; migrations?: string[]; current: JobInput; currentId: string | null; dark: boolean }
 const KEY = 'hs3d-kalkulator-v1'
 
 export function newProject(input: JobInput, settings: Settings): Project {
@@ -97,6 +97,7 @@ export function normalize(raw: unknown): AppState {
     version: 1,
     settings: { ...base.settings, ...r.settings, materials: withAdhesive(materials, storedRates.adhesiveDefault), materialSeeds: allSeeds.map((m) => m.id), ratesVersion: 9, rates: storedRates, business: fixBusiness(base.settings.business, r.settings.business) },
     projects: (r.projects ?? []).map((p) => ({ ...p, snapshot: p.snapshot ? { ...p.snapshot, materials: (p.snapshot.materials ?? []).map((m) => (m.adhesive === undefined ? { ...m, adhesive: 0 } : m)), rates: dropOldRates({ ...legacyPricing(base.settings).rates, ...p.snapshot.rates, ...(migrateRound && p.snapshot.rates?.roundTo === 5 ? { roundTo: storedRates.roundTo } : {}) }) } : p.snapshot, status: migrateStatus(p.status as string), input: fixJob(p.input), actual: Object.assign({ printHours: 0, grams: 0, laborHours: 0 }, p.actual) })),
+    projectHistory: Array.isArray(r.projectHistory) ? r.projectHistory.filter(p => p && typeof p.id === 'string' && p.input && p.snapshot) : [],
     deleted: Array.isArray(r.deleted) ? r.deleted.filter((x) => typeof x === 'string') : [],
     migrations: Array.isArray(r.migrations) ? r.migrations.filter((x) => typeof x === 'string') : [],
     customers: Array.isArray(r.customers) ? r.customers.filter((c) => c && c.id && c.name) : [],

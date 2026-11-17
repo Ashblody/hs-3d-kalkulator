@@ -20,6 +20,29 @@ describe('material details backup compatibility', () => {
   })
 })
 
+describe('ohranjanje različic pri združevanju', () => {
+  it('pred zamenjavo ohrani starejšo različico s cenikom in brez podvajanja', () => {
+    const local = initialState(), remote = structuredClone(local)
+    remote.projects[0].input.description = 'spremenjeno na drugi napravi'
+    remote.projects[0].updatedAt = '2999-01-01T00:00:00Z'
+    const merged = mergeStates(local, remote).state
+    expect(merged.projects[0].input.description).toBe('spremenjeno na drugi napravi')
+    expect(merged.projectHistory).toHaveLength(1)
+    expect(merged.projectHistory![0]).toEqual(local.projects[0])
+    const again = mergeStates(merged, remote).state
+    expect(again.projectHistory).toHaveLength(1)
+    const reloaded = normalize(JSON.parse(JSON.stringify(again)))
+    expect(reloaded.projectHistory).toEqual(again.projectHistory)
+  })
+  it('ob enakem datumu ohrani drugačno različico brez zamenjave lokalne', () => {
+    const local = initialState(), remote = structuredClone(local)
+    remote.projects[0].input.description = 'drugačen vnos'
+    const merged = mergeStates(local, remote).state
+    expect(merged.projects[0]).toEqual(local.projects[0])
+    expect(merged.projectHistory?.[0].input.description).toBe('drugačen vnos')
+  })
+})
+
 describe('ponudba brez internih postavk', () => {
   it('vključi rezervo in pribitek v ceno brez razkritja, skupni znesek ostane enak', () => {
     const state = initialState()
