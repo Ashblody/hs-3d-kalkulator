@@ -20,6 +20,22 @@ describe('material details backup compatibility', () => {
   })
 })
 
+describe('ponudba brez internih postavk', () => {
+  it('vključi rezervo in pribitek v ceno brez razkritja, skupni znesek ostane enak', () => {
+    const state = initialState()
+    const settings = structuredClone(state.settings)
+    settings.rates.roundTo = 0
+    settings.rates.minOrder = 0
+    settings.rates.marginPct = 20
+    const job = { ...demoJob(), reservePct: 10 }
+    const { lines, totals, r } = quoteData(job, settings)
+    expect(r.fail).toBeGreaterThan(0)
+    expect(r.margin).toBeGreaterThan(0)
+    expect(JSON.stringify({ lines, totals })).not.toMatch(/marža|neuspel/i)
+    expect(lines.reduce((sum, line) => sum + line[2], 0)).toBeCloseTo(r.net, 5)
+  })
+})
+
 describe('varnostna kopija – združevanje', () => {
   it('brez dvojnikov po id, novejši zmaga', () => {
     const a = initialState(); const b = structuredClone(a)

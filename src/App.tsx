@@ -6,7 +6,7 @@ import { duplicateProject, hasUnsaved, isRenamed, newProject, saveCurrent, start
 import type { JobInput, Project, Settings } from './types'
 import Dashboard from './Dashboard'
 import Quote from './Quote'
-import Quick from './Quick'
+import Quick from './QuickView'
 import { copyText, jobText } from './quick'
 import { exportJson, importJson, mergeStates } from './backup'
 import { buildPdf, buildXlsx, pdfName, saveFile, xlsxName } from './exporters'
